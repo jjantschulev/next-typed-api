@@ -1,0 +1,10 @@
+{
+  "entry": ["src/index.ts", "src/lib.ts"],
+  "extensions": [".ts", ".js", ".d.ts"],
+  "ignoreUnresolved": [
+    "next",
+    "next/dist/shared/lib/constants",
+    "next/server",
+    "next/dist/server/web/spec-extension/cookies"
+  ]
+}

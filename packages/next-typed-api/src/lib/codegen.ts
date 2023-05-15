@@ -1,5 +1,5 @@
-import { ApiPath } from "./parse-appdir";
-import { RequestMethod, RequestMethodHasBody } from "./typed-api";
+import { ApiPath } from './parse-appdir';
+import { RequestMethod, RequestMethodHasBody } from './typed-api';
 
 export function codegen(paths: ApiPath[], baseFolderPath: string) {
   const imports: string[] = [];
@@ -19,7 +19,7 @@ export function codegen(paths: ApiPath[], baseFolderPath: string) {
   for (const path of paths) {
     const importId = `Route${currentIndex++}`;
     const importPath =
-      "./" + path.filepath.slice(baseFolderPath.length + 1, -3);
+      './' + path.filepath.slice(baseFolderPath.length + 1, -3);
 
     const methods = Object.entries(path.methods)
       .filter(([, hasMethod]) => hasMethod)
@@ -28,14 +28,14 @@ export function codegen(paths: ApiPath[], baseFolderPath: string) {
     imports.push(
       `import type { ${methods
         .map((m) => `${m} as ${importId}${m}`)
-        .join(", ")} } from "${importPath}";`
+        .join(', ')} } from "${importPath}";`,
     );
 
     const paramsTypeArgs = Object.entries(path.params)
       .map(([param, type]) => {
-        return `${param}:${type === "string" ? "string" : "string[]"};`;
+        return `${param}:${type === 'string' ? 'string' : 'string[]'};`;
       })
-      .join("");
+      .join('');
 
     if (paramsTypeArgs.length > 0)
       params.push(`type ${importId}Params = {${paramsTypeArgs}};`);
@@ -44,11 +44,11 @@ export function codegen(paths: ApiPath[], baseFolderPath: string) {
     methods.forEach((m) => {
       asserts.push(`Assert<APIType<typeof ${importId}${m}>["method"], "${m}">`);
       asserts.push(
-        `Assert<APIType<typeof ${importId}${m}>["routeParams"], ${importId}Params>`
+        `Assert<APIType<typeof ${importId}${m}>["routeParams"], ${importId}Params>`,
       );
 
       routes[m].push(
-        `'${path.url}': { api: APIType<typeof ${importId}${m}>; params: ${importId}Params; };`
+        `'${path.url}': { api: APIType<typeof ${importId}${m}>; params: ${importId}Params; };`,
       );
     });
   }
@@ -57,7 +57,7 @@ export function codegen(paths: ApiPath[], baseFolderPath: string) {
     .filter(([, r]) => r.length)
     .map(([method, routes]) => {
       return `type Routes${method} = {
-    ${routes.join("\n    ")}
+    ${routes.join('\n    ')}
 };`;
     });
 
@@ -74,7 +74,7 @@ export function codegen(paths: ApiPath[], baseFolderPath: string) {
         RequestMethodHasBody[method as RequestMethod]
           ? `
         body: ObjectToNever<Routes${method}[Route]["api"]["body"]>,`
-          : ""
+          : ''
       }
     }>,
 ): Promise<WithErrors<Routes${method}[Route]["api"]["data"], RequestError, ThrowErrors>> {
@@ -95,8 +95,8 @@ export function codegen(paths: ApiPath[], baseFolderPath: string) {
             },
             ${
               RequestMethodHasBody[method as RequestMethod]
-                ? "body: JSON.stringify(dataAny.body),"
-                : ""
+                ? 'body: JSON.stringify(dataAny.body),'
+                : ''
             }
             ...dataAny.options,
         });
@@ -124,18 +124,20 @@ export function codegen(paths: ApiPath[], baseFolderPath: string) {
 }`;
     });
 
-  return `import type { APIType, APIResponseWrapper } from "next-typed-api/lib"
+  return `/* eslint-disable */
   
-${imports.join("\n")}
+import type { APIType, APIResponseWrapper } from "next-typed-api/lib"
+  
+${imports.join('\n')}
 
-${params.join("\n")}
+${params.join('\n')}
 
-${routeDict.join("\n")}
+${routeDict.join('\n')}
 
-${functions.join("\n")}
+${functions.join('\n')}
 
 type _Asserts = [
-    ${asserts.join(",\n    ")}
+    ${asserts.join(',\n    ')}
 ];
 
 type Assert<T, U extends T> = T;

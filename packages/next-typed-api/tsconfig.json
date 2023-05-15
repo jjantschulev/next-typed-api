@@ -1,11 +1,11 @@
 {
   "extends": "tsconfig/base.json",
   "compilerOptions": {
-    "outDir": "dist",
+    "outDir": ".",
     "declarationMap": false,
     "downlevelIteration": true,
     "target": "ESNEXT",
     "module": "es2020"
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts"]
 }

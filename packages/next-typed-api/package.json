@@ -12,6 +12,8 @@
     "dev": "concurrently \"pnpm run build:tsc --watch\" \"pnpm run build:swc --watch\"",
     "release": "turbo-module publish"
   },
+  "repository": "https://github.com/jjantschulev/next-typed-api",
+  "bugs": "https://github.com/jjantschulev/next-typed-api/issues",
   "keywords": [],
   "author": "",
   "license": "ISC",

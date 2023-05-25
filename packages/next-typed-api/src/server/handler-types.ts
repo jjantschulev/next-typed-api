@@ -1,6 +1,6 @@
-import { ResponseCookies } from "next/dist/server/web/spec-extension/cookies";
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
+import type { ResponseCookies } from 'next/dist/server/web/spec-extension/cookies';
+import type { NextRequest, NextResponse } from 'next/server';
+import type { z } from 'zod';
 
 export type RouteParamsBase = Record<string, string | string[]> | object;
 export type ContextBase = object;
@@ -9,7 +9,7 @@ export type NextJSRequestHandler<RouteParams extends RouteParamsBase> = (
   req: NextRequest,
   params: {
     params: RouteParams;
-  }
+  },
 ) => Promise<NextResponse> | NextResponse;
 
 export type CookieSetArgs = Parameters<typeof ResponseCookies.prototype.set>;
@@ -18,7 +18,7 @@ export type CookieDeleteArgs = Parameters<
 >;
 
 // eslint-disable-next-line @typescript-eslint/ban-types
-export type EmptyZodObject = z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+export type EmptyZodObject = z.ZodObject<{}, 'strip', z.ZodTypeAny, {}, {}>;
 
 export type RequestHandler<
   RouteParams,
@@ -26,7 +26,7 @@ export type RequestHandler<
   RequestCookies,
   Body,
   Context,
-  Res
+  Res,
 > = (options: {
   params: RouteParams;
   query: QueryParams;
@@ -40,13 +40,13 @@ export type RequestHandler<
 }) => Res | NextResponse | Promise<Res | NextResponse>;
 
 export type RequestMethod =
-  | "GET"
-  | "POST"
-  | "PUT"
-  | "PATCH"
-  | "DELETE"
-  | "HEAD"
-  | "OPTIONS";
+  | 'GET'
+  | 'POST'
+  | 'PUT'
+  | 'PATCH'
+  | 'DELETE'
+  | 'HEAD'
+  | 'OPTIONS';
 export const RequestMethodHasBody = {
   GET: false,
   POST: true,
@@ -62,5 +62,5 @@ export type RequestMethodWithBody = {
 }[RequestMethod];
 
 export type APIResponseWrapper<Res> =
-  | { status: "error"; message: string }
-  | { status: "ok"; data: Res };
+  | { status: 'error'; message: string }
+  | { status: 'ok'; data: Res };

@@ -1,17 +1,17 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export type PartialZodObject<T extends z.AnyZodObject> = z.ZodObject<
   {
-    [K in keyof T["shape"]]: z.ZodOptional<T["shape"][K]>;
+    [K in keyof T['shape']]: z.ZodOptional<T['shape'][K]>;
   },
-  T["_def"]["unknownKeys"],
-  T["_def"]["catchall"]
+  T['_def']['unknownKeys'],
+  T['_def']['catchall']
 >;
 
 export type ZodObjectsDontConflict<
   T1 extends z.AnyZodObject,
-  T2 extends z.AnyZodObject
-> = ObjectsDontConflict<T1["shape"], T2["shape"]> extends never ? never : T1;
+  T2 extends z.AnyZodObject,
+> = ObjectsDontConflict<T1['shape'], T2['shape']> extends never ? never : T1;
 
 export type ObjectsDontConflict<T1 extends object, T2 extends object> = {
   [K in keyof T1]: K extends keyof T2
@@ -40,40 +40,38 @@ export type TripleMerge<A, B, C> = Expand<
 
 export type MergeZodObjects<
   A extends z.AnyZodObject,
-  B extends z.AnyZodObject
+  B extends z.AnyZodObject,
 > = z.ZodObject<
-  z.objectUtil.extendShape<A["shape"], B["shape"]>,
-  B["_def"]["unknownKeys"],
-  B["_def"]["catchall"]
+  z.objectUtil.extendShape<A['shape'], B['shape']>,
+  B['_def']['unknownKeys'],
+  B['_def']['catchall']
 >;
 
 export type ExtendZodObject<
   A extends z.AnyZodObject,
-  B extends z.ZodRawShape
+  B extends z.ZodRawShape,
 > = z.ZodObject<
-  z.objectUtil.extendShape<A["shape"], B>,
-  A["_def"]["unknownKeys"],
-  A["_def"]["catchall"]
+  z.objectUtil.extendShape<A['shape'], B>,
+  A['_def']['unknownKeys'],
+  A['_def']['catchall']
 >;
 
 export type ExtendsBig<T, U> = T extends U ? T : never;
 export type ExtendsSmall<T, U> = T extends U ? U : never;
 
-// function test<U extends z.AnyZodObject, T extends z.AnyZodObject>(
-//   base: U,
-//   schema: ZodObjectsDontConflict<T, U>
-// ) {
-//   return base.merge(schema);
-// }
-
-// const a = z.object({
-//   a: z.string(),
-//   b: z.number(),
-// });
-
-// const b = z.object({
-//   b: z.string(),
-//   c: z.boolean(),
-// });
-
-// test(a, b);
+export type Assert<T, U extends T> = T;
+export type WithErrors<
+  T,
+  E,
+  ThrowErrors extends boolean | undefined,
+> = ThrowErrors extends false
+  ? { status: 'error'; error: E } | { status: 'ok'; data: T }
+  : T;
+export type RemoveNever<T> = Pick<
+  T,
+  {
+    [K in keyof T]: T[K] extends never ? never : K;
+  }[keyof T]
+>;
+export type ObjectToNever<T> = object extends T ? never : T;
+export type EmptyRecordToNever<T> = Record<string, never> extends T ? never : T;

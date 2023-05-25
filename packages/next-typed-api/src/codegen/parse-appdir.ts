@@ -1,10 +1,10 @@
-import { parse } from "@swc/core";
-import { readdir, readFile, stat } from "fs/promises";
-import path from "path";
-import { RequestMethod } from "./typed-api";
+import { parse } from '@swc/core';
+import { readdir, readFile, stat } from 'fs/promises';
+import path from 'path';
+import { RequestMethod } from '../server/typed-api';
 
 type Segment = {
-  type: "static" | "param" | "catchAll" | "group";
+  type: 'static' | 'param' | 'catchAll' | 'group';
   value: string;
 };
 
@@ -19,14 +19,14 @@ type Route = {
 export async function parseDir(
   dir: string,
   parent: Route | null,
-  initialSegment?: Segment
+  initialSegment?: Segment,
 ): Promise<Route | null> {
   const filesAndFolders = await readdir(dir);
   const folderName = path.basename(dir);
 
   const segment: Segment = initialSegment ?? getSegment(folderName);
 
-  const hasHandler = filesAndFolders.includes("route.ts");
+  const hasHandler = filesAndFolders.includes('route.ts');
 
   const route: Route = {
     path: dir,
@@ -55,7 +55,7 @@ export type ApiPath = {
   filepath: string;
   url: string;
   methods: Record<RequestMethod, boolean>;
-  params: Record<string, "string" | "array">;
+  params: Record<string, 'string' | 'array'>;
 };
 
 export async function getApiPaths(route: Route): Promise<ApiPath[]> {
@@ -63,39 +63,39 @@ export async function getApiPaths(route: Route): Promise<ApiPath[]> {
   const routesWithHandlers = getRoutesWithHandlers(route);
   for (const route of routesWithHandlers) {
     const segments = getRoutePath(route);
-    const filepath = route.path + "/route.ts";
+    const filepath = route.path + '/route.ts';
     const url = segments
-      .filter((s) => s.segment.type !== "group")
+      .filter((s) => s.segment.type !== 'group')
       .map((s) =>
-        s.segment.type === "static"
+        s.segment.type === 'static'
           ? s.segment.value
-          : s.segment.type === "catchAll"
+          : s.segment.type === 'catchAll'
           ? `*${s.segment.value}`
-          : `:${s.segment.value}`
+          : `:${s.segment.value}`,
       )
-      .join("/");
+      .join('/');
 
     const params = segments
       .filter(
-        (s) => s.segment.type === "param" || s.segment.type === "catchAll"
+        (s) => s.segment.type === 'param' || s.segment.type === 'catchAll',
       )
       .reduce((acc, s) => {
         if (acc[s.segment.value]) {
           console.log(
-            `WARNING: Ignored duplicate param: ${s.segment.value} in route: ${url} in file: ${filepath}`
+            `WARNING: Ignored duplicate param: ${s.segment.value} in route: ${url} in file: ${filepath}`,
           );
           return acc;
         }
-        acc[s.segment.value] = s.segment.type === "param" ? "string" : "array";
+        acc[s.segment.value] = s.segment.type === 'param' ? 'string' : 'array';
         return acc;
-      }, {} as Record<string, "string" | "array">);
+      }, {} as Record<string, 'string' | 'array'>);
 
     const methods: Record<RequestMethod, boolean> = (
       await getNamedExports(filepath)
     ).reduce((acc, name) => {
       if (
-        ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"].includes(
-          name
+        ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'].includes(
+          name,
         )
       ) {
         acc[name as RequestMethod] = true;
@@ -105,7 +105,7 @@ export async function getApiPaths(route: Route): Promise<ApiPath[]> {
 
     if (!Object.values(methods).some((v) => v)) {
       console.log(
-        `WARNING: No handler methods found for route: ${url} in file: ${filepath}`
+        `WARNING: No handler methods found for route: ${url} in file: ${filepath}`,
       );
       continue;
     }
@@ -146,26 +146,26 @@ function getSegment(folderName: string): Segment {
   if (isDynamicSegment(folderName)) {
     const result = dynamicSegmentRegex.exec(folderName);
     return {
-      type: "param",
-      value: result?.[1] || "",
+      type: 'param',
+      value: result?.[1] || '',
     };
   }
   if (isCatchAllSegment(folderName)) {
     const result = catchAllSegmentRegex.exec(folderName);
     return {
-      type: "catchAll",
-      value: result?.[1] || "",
+      type: 'catchAll',
+      value: result?.[1] || '',
     };
   }
   if (isRouteGroupSegment(folderName)) {
     const result = routeGroupSegmentRegex.exec(folderName);
     return {
-      type: "group",
-      value: result?.[1] || "",
+      type: 'group',
+      value: result?.[1] || '',
     };
   }
   return {
-    type: "static",
+    type: 'static',
     value: folderName,
   };
 }
@@ -183,25 +183,25 @@ export const isRouteGroupSegment = (segment: string) =>
   routeGroupSegmentRegex.test(segment);
 
 async function getNamedExports(filepath: string) {
-  const code = await readFile(filepath, { encoding: "utf8" });
+  const code = await readFile(filepath, { encoding: 'utf8' });
   const ast = await parse(code, {
-    syntax: "typescript",
+    syntax: 'typescript',
   });
   const exports = [];
   for (const item of ast.body) {
-    if (item.type === "ExportDeclaration") {
+    if (item.type === 'ExportDeclaration') {
       const { declaration } = item;
-      if (declaration.type === "VariableDeclaration") {
+      if (declaration.type === 'VariableDeclaration') {
         const { declarations } = declaration;
         for (const variableDeclarator of declarations) {
-          if (variableDeclarator.id.type === "Identifier")
+          if (variableDeclarator.id.type === 'Identifier')
             exports.push(variableDeclarator.id.value);
         }
-      } else if (declaration.type === "FunctionDeclaration")
+      } else if (declaration.type === 'FunctionDeclaration')
         exports.push(declaration.identifier.value);
-    } else if (item.type === "ExportNamedDeclaration") {
+    } else if (item.type === 'ExportNamedDeclaration') {
       for (const specifier of item.specifiers) {
-        if (specifier.type === "ExportSpecifier") {
+        if (specifier.type === 'ExportSpecifier') {
           if (specifier.exported) exports.push(specifier.exported.value);
           else exports.push(specifier.orig.value);
         }

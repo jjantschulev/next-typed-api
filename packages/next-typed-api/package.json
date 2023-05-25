@@ -3,14 +3,15 @@
   "version": "0.0.0",
   "description": "",
   "private": false,
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "index.js",
+  "types": "index.d.ts",
   "scripts": {
     "build": "concurrently \"pnpm run build:tsc\" \"pnpm run build:swc\"",
     "build:tsc": "tsc --emitDeclarationOnly",
     "build:swc": "swc src -d ./ -C jsc.parser.syntax=typescript -C module.type=commonjs",
     "dev": "concurrently \"pnpm run build:tsc --watch\" \"pnpm run build:swc --watch\"",
-    "release": "turbo-module publish"
+    "release": "turbo-module publish",
+    "clean": "rm -rf ./client/ ./server/ ./codegen/ ./index.d.ts ./index.js"
   },
   "repository": "https://github.com/jjantschulev/next-typed-api",
   "bugs": "https://github.com/jjantschulev/next-typed-api/issues",

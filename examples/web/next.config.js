@@ -1,4 +1,4 @@
-const { withTypedApi } = require("next-typed-api");
+const { withTypedApi } = require('next-typed-api/codegen');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

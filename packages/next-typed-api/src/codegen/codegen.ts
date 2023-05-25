@@ -1,7 +1,11 @@
+import { RequestMethod, RequestMethodHasBody } from '../server/typed-api';
 import { ApiPath } from './parse-appdir';
-import { RequestMethod, RequestMethodHasBody } from './typed-api';
 
-export function codegen(paths: ApiPath[], baseFolderPath: string) {
+export function codegen(
+  paths: ApiPath[],
+  baseFolderPath: string,
+  { reactQuery }: { reactQuery?: boolean } = {},
+) {
   const imports: string[] = [];
   const params: string[] = [];
   const asserts: string[] = [];
@@ -69,6 +73,7 @@ export function codegen(paths: ApiPath[], baseFolderPath: string) {
     data: RemoveNever<{
         throwErrors?: ThrowErrors,
         options?: RequestInit,
+        baseUrl?: string,
         params: EmptyRecordToNever<Routes${method}[Route]["params"]>,
         query: ObjectToNever<Routes${method}[Route]["api"]["queryParams"]>,${
         RequestMethodHasBody[method as RequestMethod]
@@ -170,7 +175,7 @@ function errorTypeFromCode(code: number): RequestErrorType {
     return "unknown";
 }
 
-function buildUrl(path: string, params: Record<string, string | string[]>) {
+function buildUrl(path: string, params: Record<string, string | string[]>, baseUrl?: string) {
     const parts = path.split("/");
     const url = parts
       .map((part) => {
@@ -185,7 +190,8 @@ function buildUrl(path: string, params: Record<string, string | string[]>) {
         } else return part;
       })
       .join("/");
-    return url;
+    const u = new URL(url, baseUrl);
+    return u.href;
 }
 `;
 }

@@ -75,3 +75,23 @@ export type RemoveNever<T> = Pick<
 >;
 export type ObjectToNever<T> = object extends T ? never : T;
 export type EmptyRecordToNever<T> = Record<string, never> extends T ? never : T;
+
+export type PickUndefined<T> = {
+  [P in keyof T as undefined extends T[P] ? P : never]: T[P];
+};
+
+export type PickNotUndefined<T> = {
+  [P in keyof T as undefined extends T[P] ? never : P]: T[P];
+};
+
+export type AddOptionalsToUndefined<T> = {
+  [K in keyof PickUndefined<T>]?: T[K];
+} & {
+  [K in keyof PickNotUndefined<T>]: T[K];
+};
+
+export type MakeObjectWithOptionalKeysUndefinable<T> = keyof T extends keyof {
+  [K in keyof T as undefined extends T[K] ? K : never]: true;
+}
+  ? T | undefined
+  : T;

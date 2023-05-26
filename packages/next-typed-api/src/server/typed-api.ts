@@ -1,11 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import { BaseRequestHandler } from "./base-request-handler";
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { BaseRequestHandler } from './base-request-handler';
 import {
   NextJSRequestHandler,
   RequestMethod,
   RequestMethodHasBody,
-} from "./handler-types";
+} from './handler-types';
+
+type UntypedAPIType<RouteParams = Record<string, string | string[]>> = {
+  typeSafe: false;
+  method: RequestMethod;
+  body: object;
+  routeParams: RouteParams;
+  queryParams: object;
+  cookies: object;
+  data: object;
+};
 
 export type APIType<T> = T extends (
   req: NextRequest,
@@ -17,35 +27,24 @@ export type APIType<T> = T extends (
     query: infer Q;
     cookies: infer C;
     data: infer D;
-  }
+  },
 ) => Promise<NextResponse>
-  ? {
-      method: M;
-      body: B;
-      routeParams: RP;
-      queryParams: Q;
-      cookies: C;
-      data: D;
-    }
+  ? unknown extends M
+    ? UntypedAPIType
+    : {
+        typeSafe: true;
+        method: M;
+        body: B;
+        routeParams: RP;
+        queryParams: Q;
+        cookies: C;
+        data: D;
+      }
   : T extends NextJSRequestHandler<infer RP>
-  ? {
-      method: RequestMethod;
-      body: object;
-      routeParams: RP;
-      queryParams: object;
-      cookies: object;
-      data: object;
-    }
-  : {
-      method: RequestMethod;
-      body: object;
-      routeParams: Record<string, string | string[]>;
-      queryParams: object;
-      cookies: object;
-      data: object;
-    };
+  ? UntypedAPIType<RP>
+  : UntypedAPIType;
 
-export { redirect } from "./errors";
+export { redirect } from './errors';
 export type { RequestMethod };
 export { RequestMethodHasBody };
 

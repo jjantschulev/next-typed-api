@@ -22,11 +22,13 @@ export const withTypedApi =
           phase: string,
           args: { defaultConfig: NextConfig },
         ) => Promise<NextConfig>),
+    options?: BuildConfig,
   ) =>
   async (phase: string, args: { defaultConfig: NextConfig }) => {
     const cfg = typeof next === 'function' ? await next(phase, args) : next;
     const buildConfig: BuildConfig = {
-      basePath: cfg.basePath || '/',
+      ...options,
+      basePath: options?.basePath || cfg.basePath || '/',
     };
     if (phase === PHASE_DEVELOPMENT_SERVER) {
       await dev(buildConfig);

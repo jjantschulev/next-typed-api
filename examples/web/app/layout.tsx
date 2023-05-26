@@ -1,6 +1,8 @@
+import { Providers } from './Providers';
+
 export const metadata = {
-  title: "NextJS Typed API",
-  description: "Typesafe API Routes for NextJS App Directory",
+  title: 'NextJS Typed API',
+  description: 'Typesafe API Routes for NextJS App Directory',
 };
 
 export default function RootLayout({
@@ -10,7 +12,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

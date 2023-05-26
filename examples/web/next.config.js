@@ -7,4 +7,7 @@ const nextConfig = {
   },
 };
 
-module.exports = withTypedApi(nextConfig);
+module.exports = withTypedApi(nextConfig, {
+  reactQuery: true,
+  baseUrl: process.env.VERCEL_URL ?? 'http://localhost:3000',
+});

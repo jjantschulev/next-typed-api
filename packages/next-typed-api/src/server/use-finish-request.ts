@@ -1,8 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import { RedirectError } from "./errors";
+import { isNotFoundError } from 'next/dist/client/components/not-found';
 import {
-  APIResponseWrapper,
+  getURLFromRedirectError,
+  isRedirectError,
+} from 'next/dist/client/components/redirect';
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { RedirectError } from './errors';
+import {
   ContextBase,
   CookieDeleteArgs,
   CookieSetArgs,
@@ -10,8 +14,8 @@ import {
   RequestMethod,
   RequestMethodWithBody,
   RouteParamsBase,
-} from "./handler-types";
-import { UseContext } from "./use-context";
+} from './handler-types';
+import { UseContext } from './use-context';
 
 export abstract class UseFinishRequest<
   RouteParams extends RouteParamsBase,
@@ -19,7 +23,7 @@ export abstract class UseFinishRequest<
   Cookies extends z.SomeZodObject,
   Body extends z.SomeZodObject,
   InputContext extends ContextBase,
-  OutputContext extends ContextBase
+  OutputContext extends ContextBase,
 > extends UseContext<
   RouteParams,
   QueryParams,
@@ -41,38 +45,34 @@ export abstract class UseFinishRequest<
       Method extends RequestMethodWithBody ? z.TypeOf<Body> : undefined,
       OutputContext,
       D
-    >
+    >,
   ) {
     const realHandler = async (
       req: NextRequest,
-      { params: rawParams }: { params: RouteParams }
+      { params: rawParams }: { params: RouteParams },
     ) => {
-      const { body, query, cookies, params } =
-        this.getBaseHandler().parseRequest(req, { params: rawParams });
-
-      const headers = new Headers();
-
       const cookiesMap = new Map<
         string,
-        | { type: "set"; set: CookieSetArgs }
-        | { type: "delete"; delete: CookieDeleteArgs }
+        | { type: 'set'; set: CookieSetArgs }
+        | { type: 'delete'; delete: CookieDeleteArgs }
       >();
-
       function setCookie(...args: CookieSetArgs) {
-        const key = typeof args[0] === "string" ? args[0] : args[0].name;
-        cookiesMap.set(key, { type: "set", set: args });
+        const key = typeof args[0] === 'string' ? args[0] : args[0].name;
+        cookiesMap.set(key, { type: 'set', set: args });
       }
       function deleteCookie(...args: CookieDeleteArgs) {
-        const key = typeof args[0] === "string" ? args[0] : args[0].name;
+        const key = typeof args[0] === 'string' ? args[0] : args[0].name;
         if (cookiesMap.has(key)) {
           cookiesMap.delete(key);
         }
-        cookiesMap.set(key, { type: "delete", delete: args });
+        cookiesMap.set(key, { type: 'delete', delete: args });
       }
-
       let res;
-
+      const headers = new Headers();
       try {
+        const { body, query, cookies, params } =
+          this.getBaseHandler().parseRequest(req, { params: rawParams });
+
         const realBody = body as Method extends RequestMethodWithBody
           ? z.TypeOf<Body>
           : undefined;
@@ -107,21 +107,39 @@ export abstract class UseFinishRequest<
         if (error instanceof RedirectError) {
           res = NextResponse.redirect(error.url, error.statusCode);
         }
+        if (isRedirectError(error)) {
+          const url = getURLFromRedirectError(error);
+          res = NextResponse.redirect(url, 307);
+        }
+        if (isNotFoundError(error)) {
+          res = NextResponse.json(
+            JSON.stringify({ status: 'error', message: 'Not found' }),
+            {
+              status: 404,
+              statusText: 'Not found',
+            },
+          );
+        }
         const errorMessage =
-          (error as Error).message ?? (error as string) ?? "Unknown error";
-        res = getJsonResponse({ status: "error", message: errorMessage });
+          (error as Error).message ?? (error as string) ?? 'Unknown error';
+        res = NextResponse.json(
+          { status: 'error', message: errorMessage },
+          {
+            status: 500,
+            statusText: 'Internal server error',
+          },
+        );
       }
 
       const response =
-        res instanceof NextResponse
-          ? res
-          : getJsonResponse({ status: "ok", data: res });
+        res instanceof NextResponse ? res : NextResponse.json(res);
 
       for (const [key, value] of headers.entries()) {
         response.headers.set(key, value);
       }
-      for (const cookie of cookies.values()) {
-        if (cookie.type === "set") {
+
+      for (const cookie of cookiesMap.values()) {
+        if (cookie.type === 'set') {
           response.cookies.set(...cookie.set);
         } else {
           response.cookies.delete(...cookie.delete);
@@ -141,7 +159,7 @@ export abstract class UseFinishRequest<
         query: z.infer<QueryParams>;
         cookies: z.infer<Cookies>;
         data: D;
-      }
+      },
     ) => Promise<NextResponse>;
   }
 
@@ -153,9 +171,9 @@ export abstract class UseFinishRequest<
       undefined,
       OutputContext,
       D
-    >
+    >,
   ) {
-    return this.finish("GET", handler);
+    return this.finish('GET', handler);
   }
   public post<D extends object>(
     handler: RequestHandler<
@@ -165,9 +183,9 @@ export abstract class UseFinishRequest<
       z.TypeOf<Body>,
       OutputContext,
       D
-    >
+    >,
   ) {
-    return this.finish("POST", handler);
+    return this.finish('POST', handler);
   }
   public put<D extends object>(
     handler: RequestHandler<
@@ -177,9 +195,9 @@ export abstract class UseFinishRequest<
       z.TypeOf<Body>,
       OutputContext,
       D
-    >
+    >,
   ) {
-    return this.finish("PUT", handler);
+    return this.finish('PUT', handler);
   }
   public patch<D extends object>(
     handler: RequestHandler<
@@ -189,9 +207,9 @@ export abstract class UseFinishRequest<
       z.TypeOf<Body>,
       OutputContext,
       D
-    >
+    >,
   ) {
-    return this.finish("PATCH", handler);
+    return this.finish('PATCH', handler);
   }
   public delete<D extends object>(
     handler: RequestHandler<
@@ -201,9 +219,9 @@ export abstract class UseFinishRequest<
       undefined,
       OutputContext,
       D
-    >
+    >,
   ) {
-    return this.finish("DELETE", handler);
+    return this.finish('DELETE', handler);
   }
   public head<D extends object>(
     handler: RequestHandler<
@@ -213,9 +231,9 @@ export abstract class UseFinishRequest<
       undefined,
       OutputContext,
       D
-    >
+    >,
   ) {
-    return this.finish("HEAD", handler);
+    return this.finish('HEAD', handler);
   }
   public options<D extends object>(
     handler: RequestHandler<
@@ -225,12 +243,8 @@ export abstract class UseFinishRequest<
       undefined,
       OutputContext,
       D
-    >
+    >,
   ) {
-    return this.finish("OPTIONS", handler);
+    return this.finish('OPTIONS', handler);
   }
-}
-
-function getJsonResponse<D extends object>(data: APIResponseWrapper<D>) {
-  return NextResponse.json(data);
 }

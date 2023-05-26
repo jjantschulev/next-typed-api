@@ -61,6 +61,12 @@ export type RequestMethodWithBody = {
   [K in RequestMethod]: TRequestMethodHasBody[K] extends true ? K : never;
 }[RequestMethod];
 
-export type APIResponseWrapper<Res> =
-  | { status: 'error'; message: string }
-  | { status: 'ok'; data: Res };
+export const IS_MUTATION: Record<RequestMethod, boolean> = {
+  GET: false,
+  POST: true,
+  PUT: true,
+  PATCH: true,
+  DELETE: true,
+  HEAD: false,
+  OPTIONS: false,
+};

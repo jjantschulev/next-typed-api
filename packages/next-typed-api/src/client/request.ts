@@ -1,22 +1,24 @@
 import type {
-  APIResponseWrapper,
   RequestMethod,
+  TRequestMethodHasBody,
 } from '../server/handler-types';
 import { RequestMethodHasBody } from '../server/handler-types';
 import type {
+  AddOptionalsToUndefined,
   EmptyRecordToNever,
+  MakeObjectWithOptionalKeysUndefinable,
   ObjectToNever,
   RemoveNever,
-  WithErrors,
 } from '../server/type-helpers';
 
-type RouteDefinitions = {
+export type RouteDefinitions = {
   [route: string]: {
     params: Record<string, string | string[]>;
     api: {
+      typeSafe: boolean;
       method: RequestMethod;
       body: object;
-      routeParams: Record<string, string | string[]>;
+      routeParams: object;
       queryParams: object;
       cookies: object;
       data: object;
@@ -24,71 +26,81 @@ type RouteDefinitions = {
   };
 };
 
-export function makeApiRequestFunction<Routes extends RouteDefinitions>(
-  method: Routes[string]['api']['method'],
-) {
-  return async function <
-    Route extends keyof Routes,
-    ThrowErrors extends boolean = true,
-  >(
+export type RequestConfig<
+  RouteData extends RouteDefinitions[keyof RouteDefinitions],
+  Method extends RequestMethod,
+> = MakeObjectWithOptionalKeysUndefinable<
+  AddOptionalsToUndefined<
+    RemoveNever<{
+      params: EmptyRecordToNever<RouteData['params']>;
+      query: RouteData['api']['typeSafe'] extends true
+        ? ObjectToNever<RouteData['api']['queryParams']>
+        : Record<string, string | string[]> | undefined;
+      body: TRequestMethodHasBody[Method] extends true
+        ? RouteData['api']['typeSafe'] extends true
+          ? ObjectToNever<RouteData['api']['body']>
+          : object | string | number | boolean | undefined
+        : never;
+    }>
+  >
+>;
+
+export function makeApiRequestFunction<
+  Routes extends RouteDefinitions,
+  Method extends RequestMethod,
+>(method: Method, buildTimeBaseUrl?: string) {
+  return async function <Route extends keyof Routes>(
     route: Route,
-    data: RemoveNever<{
-      throwErrors?: ThrowErrors;
-      options?: RequestInit;
-      baseUrl?: string;
-      params: EmptyRecordToNever<Routes[Route]['params']>;
-      query: ObjectToNever<Routes[Route]['api']['queryParams']>;
-      body: ObjectToNever<Routes[Route]['api']['body']>;
-    }>,
-  ): Promise<
-    WithErrors<Routes[Route]['api']['data'], RequestError, ThrowErrors>
-  > {
+    data: RequestConfig<Routes[Route], Method>,
+    options?: RequestInit & { baseUrl?: string },
+  ): Promise<Routes[Route]['api']['data']> {
     const dataAny = data as any;
-    const shouldThrowErrors = dataAny.throwErrors ?? true;
+    const { baseUrl, ...fetchOptions } = options || {};
 
     try {
       const query = new URLSearchParams(dataAny.query as any);
       const queryStr =
         query.toString().length > 0 ? '?' + query.toString() : '';
       const response = await fetch(
-        buildUrl(route as string, dataAny.params, data.baseUrl) + queryStr,
+        buildUrl(route as string, dataAny.params, baseUrl ?? buildTimeBaseUrl) +
+          queryStr,
         {
           method: method,
           headers: {
             'Content-Type': 'application/json',
             Accept: 'application/json',
           },
-          body: RequestMethodHasBody[method]
-            ? JSON.stringify(dataAny.body)
-            : undefined,
-          ...dataAny.options,
+          body:
+            RequestMethodHasBody[method] && dataAny.body
+              ? JSON.stringify(dataAny.body)
+              : undefined,
+          ...fetchOptions,
         },
       );
 
       if (!response.ok) {
         const errorType = errorTypeFromCode(response.status);
         const message = await response.text();
-        const error = new RequestError(errorType, message);
+        let data = null;
+        try {
+          data = JSON.parse(message);
+        } catch {
+          data = null;
+        }
+
+        const error = new RequestError(errorType, message, data);
         throw error;
       }
 
-      const responseData = (await response.json()) as APIResponseWrapper<
-        Routes[Route]['api']['data']
-      >;
-
-      if (responseData.status === 'error') {
-        const error = new RequestError('server-error', responseData.message);
-        throw error;
-      }
-
-      return responseData.data as any;
+      const responseData =
+        (await response.json()) as Routes[Route]['api']['data'];
+      return responseData as any;
     } catch (e) {
       const error =
         e instanceof RequestError
           ? e
           : new RequestError('network-error', (e as Error).message);
-      if (shouldThrowErrors) throw error;
-      return { status: 'error', error: error } as any;
+      throw error;
     }
   };
 }
@@ -104,9 +116,17 @@ export type RequestErrorType =
 
 export class RequestError extends Error {
   public readonly type: RequestErrorType;
-  constructor(type: RequestErrorType, message: string) {
-    super(message);
+  public readonly data?: any | null | { status: 'error'; message: string };
+  constructor(type: RequestErrorType, message: string, data?: any | null) {
+    let parsedJson = { message: undefined };
+    try {
+      parsedJson = JSON.parse(message);
+    } catch {
+      // Empty
+    }
+    super(parsedJson.message ?? message);
     this.type = type;
+    this.data = data;
   }
 }
 
@@ -119,7 +139,7 @@ function errorTypeFromCode(code: number): RequestErrorType {
   return 'unknown';
 }
 
-function buildUrl(
+export function buildUrl(
   path: string,
   params: Record<string, string | string[]>,
   baseUrl?: string,

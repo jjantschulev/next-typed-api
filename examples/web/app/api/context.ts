@@ -1,9 +1,9 @@
-import { api, z } from "next-typed-api/lib";
+import { api, z } from 'next-typed-api';
 
 export const authenticate = api()
   .cookies({ token: z.string() })
   .use(({ cookies }) => {
-    if (cookies.token !== "valid_token") throw Error("Invalid token");
+    if (cookies.token !== 'valid_token') throw Error('Invalid token');
     return { token: cookies.token };
   });
 
@@ -18,8 +18,8 @@ export const user = api()
       user: {
         id: 1,
         token: context.token,
-        name: "John Doe",
-        email: "email@email.com",
+        name: 'John Doe',
+        email: 'email@email.com',
       },
     };
   });

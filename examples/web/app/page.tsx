@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { apiGET } from "./next-typed-api-client";
+import { useEffect } from 'react';
+import { apiGet } from './next-typed-api-client';
 
 export default function Page() {
   useEffect(() => {
-    apiGET("/api", { query: { query: "" } }).then((d) => console.log(d));
+    apiGet('/api', { query: { query: '' } }).then((d) => console.log(d));
   }, []);
 
   return (

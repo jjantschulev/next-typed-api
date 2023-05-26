@@ -51,17 +51,11 @@ export abstract class UseFinishRequest<
       req: NextRequest,
       { params: rawParams }: { params: RouteParams },
     ) => {
-      const { body, query, cookies, params } =
-        this.getBaseHandler().parseRequest(req, { params: rawParams });
-
-      const headers = new Headers();
-
       const cookiesMap = new Map<
         string,
         | { type: 'set'; set: CookieSetArgs }
         | { type: 'delete'; delete: CookieDeleteArgs }
       >();
-
       function setCookie(...args: CookieSetArgs) {
         const key = typeof args[0] === 'string' ? args[0] : args[0].name;
         cookiesMap.set(key, { type: 'set', set: args });
@@ -73,10 +67,12 @@ export abstract class UseFinishRequest<
         }
         cookiesMap.set(key, { type: 'delete', delete: args });
       }
-
       let res;
-
+      const headers = new Headers();
       try {
+        const { body, query, cookies, params } =
+          this.getBaseHandler().parseRequest(req, { params: rawParams });
+
         const realBody = body as Method extends RequestMethodWithBody
           ? z.TypeOf<Body>
           : undefined;
@@ -141,7 +137,8 @@ export abstract class UseFinishRequest<
       for (const [key, value] of headers.entries()) {
         response.headers.set(key, value);
       }
-      for (const cookie of cookies.values()) {
+
+      for (const cookie of cookiesMap.values()) {
         if (cookie.type === 'set') {
           response.cookies.set(...cookie.set);
         } else {
@@ -154,7 +151,7 @@ export abstract class UseFinishRequest<
 
     return realHandler as unknown as (
       req: NextRequest,
-      options: unknown,
+      options: any,
       _typeInfo?: {
         method: Method;
         body: z.infer<Body>;

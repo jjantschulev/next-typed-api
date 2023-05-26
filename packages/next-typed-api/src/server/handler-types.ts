@@ -60,3 +60,13 @@ export type TRequestMethodHasBody = typeof RequestMethodHasBody;
 export type RequestMethodWithBody = {
   [K in RequestMethod]: TRequestMethodHasBody[K] extends true ? K : never;
 }[RequestMethod];
+
+export const IS_MUTATION: Record<RequestMethod, boolean> = {
+  GET: false,
+  POST: true,
+  PUT: true,
+  PATCH: true,
+  DELETE: true,
+  HEAD: false,
+  OPTIONS: false,
+};

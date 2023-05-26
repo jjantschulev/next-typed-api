@@ -29,7 +29,7 @@ export type APIType<T> = T extends (
     data: infer D;
   },
 ) => Promise<NextResponse>
-  ? M extends unknown
+  ? unknown extends M
     ? UntypedAPIType
     : {
         typeSafe: true;

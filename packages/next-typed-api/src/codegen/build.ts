@@ -6,11 +6,13 @@ import { getApiPaths, parseDir } from './parse-appdir';
 export type BuildConfig = {
   basePath: string;
   reactQuery?: boolean;
+  baseUrl?: string;
 };
 
-export async function build({ basePath, reactQuery }: BuildConfig) {
+export async function build(config: BuildConfig) {
+  const { basePath: cBasePath } = config;
   // Remove trailing slash from basePath
-  basePath = basePath.replace(/\/$/, '');
+  const basePath = cBasePath.replace(/\/$/, '');
 
   const baseAppDir =
     (
@@ -35,7 +37,7 @@ export async function build({ basePath, reactQuery }: BuildConfig) {
   });
   const urls = appDir ? await getApiPaths(appDir) : [];
 
-  const code = codegen(urls, startDir, { reactQuery });
+  const code = codegen(urls, startDir, config);
 
   await writeFile(join(startDir, 'next-typed-api-client.ts'), code, {
     encoding: 'utf-8',

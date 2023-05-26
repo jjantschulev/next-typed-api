@@ -1,4 +1,7 @@
-import type { RequestMethod } from '../server/handler-types';
+import type {
+  RequestMethod,
+  TRequestMethodHasBody,
+} from '../server/handler-types';
 import { RequestMethodHasBody } from '../server/handler-types';
 import type {
   AddOptionalsToUndefined,
@@ -8,7 +11,7 @@ import type {
   RemoveNever,
 } from '../server/type-helpers';
 
-type RouteDefinitions = {
+export type RouteDefinitions = {
   [route: string]: {
     params: Record<string, string | string[]>;
     api: {
@@ -23,50 +26,55 @@ type RouteDefinitions = {
   };
 };
 
-// Create a function header that only applies if the route definition does not have any route params
-
-type RequestConfig<RouteData extends RouteDefinitions[keyof RouteDefinitions]> =
-  MakeObjectWithOptionalKeysUndefinable<
-    AddOptionalsToUndefined<
-      RemoveNever<{
-        options?: RequestInit;
-        baseUrl?: string;
-        params: EmptyRecordToNever<RouteData['params']>;
-        query: RouteData['api']['typeSafe'] extends true
-          ? ObjectToNever<RouteData['api']['queryParams']>
-          : Record<string, string | string[]> | undefined;
-        body: RouteData['api']['typeSafe'] extends true
+export type RequestConfig<
+  RouteData extends RouteDefinitions[keyof RouteDefinitions],
+  Method extends RequestMethod,
+> = MakeObjectWithOptionalKeysUndefinable<
+  AddOptionalsToUndefined<
+    RemoveNever<{
+      params: EmptyRecordToNever<RouteData['params']>;
+      query: RouteData['api']['typeSafe'] extends true
+        ? ObjectToNever<RouteData['api']['queryParams']>
+        : Record<string, string | string[]> | undefined;
+      body: TRequestMethodHasBody[Method] extends true
+        ? RouteData['api']['typeSafe'] extends true
           ? ObjectToNever<RouteData['api']['body']>
-          : object | string | number | boolean | undefined;
-      }>
-    >
-  >;
+          : object | string | number | boolean | undefined
+        : never;
+    }>
+  >
+>;
 
-export function makeApiRequestFunction<Routes extends RouteDefinitions>(
-  method: Routes[string]['api']['method'],
-) {
+export function makeApiRequestFunction<
+  Routes extends RouteDefinitions,
+  Method extends RequestMethod,
+>(method: Method, buildTimeBaseUrl?: string) {
   return async function <Route extends keyof Routes>(
     route: Route,
-    data: RequestConfig<Routes[Route]>,
+    data: RequestConfig<Routes[Route], Method>,
+    options?: RequestInit & { baseUrl?: string },
   ): Promise<Routes[Route]['api']['data']> {
     const dataAny = data as any;
+    const { baseUrl, ...fetchOptions } = options || {};
 
     try {
       const query = new URLSearchParams(dataAny.query as any);
       const queryStr =
         query.toString().length > 0 ? '?' + query.toString() : '';
       const response = await fetch(
-        buildUrl(route as string, dataAny.params, dataAny.baseUrl) + queryStr,
+        buildUrl(route as string, dataAny.params, baseUrl ?? buildTimeBaseUrl) +
+          queryStr,
         {
           method: method,
           headers: {
             'Content-Type': 'application/json',
             Accept: 'application/json',
           },
-          body: RequestMethodHasBody[method]
-            ? JSON.stringify(dataAny.body)
-            : undefined,
-          ...dataAny.options,
+          body:
+            RequestMethodHasBody[method] && dataAny.body
+              ? JSON.stringify(dataAny.body)
+              : undefined,
+          ...fetchOptions,
         },
       );
 
@@ -110,7 +118,13 @@ export class RequestError extends Error {
   public readonly type: RequestErrorType;
   public readonly data?: any | null | { status: 'error'; message: string };
   constructor(type: RequestErrorType, message: string, data?: any | null) {
-    super(message);
+    let parsedJson = { message: undefined };
+    try {
+      parsedJson = JSON.parse(message);
+    } catch {
+      // Empty
+    }
+    super(parsedJson.message ?? message);
     this.type = type;
     this.data = data;
   }
@@ -125,7 +139,7 @@ function errorTypeFromCode(code: number): RequestErrorType {
   return 'unknown';
 }
 
-function buildUrl(
+export function buildUrl(
   path: string,
   params: Record<string, string | string[]>,
   baseUrl?: string,

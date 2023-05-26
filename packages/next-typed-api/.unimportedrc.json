@@ -10,6 +10,8 @@
     "next",
     "next/dist/shared/lib/constants",
     "next/server",
-    "next/dist/server/web/spec-extension/cookies"
+    "next/dist/server/web/spec-extension/cookies",
+    "next/dist/client/components/not-found",
+    "next/dist/client/components/redirect"
   ]
 }

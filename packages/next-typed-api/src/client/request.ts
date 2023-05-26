@@ -1,22 +1,21 @@
-import type {
-  APIResponseWrapper,
-  RequestMethod,
-} from '../server/handler-types';
+import type { RequestMethod } from '../server/handler-types';
 import { RequestMethodHasBody } from '../server/handler-types';
 import type {
+  AddOptionalsToUndefined,
   EmptyRecordToNever,
+  MakeObjectWithOptionalKeysUndefinable,
   ObjectToNever,
   RemoveNever,
-  WithErrors,
 } from '../server/type-helpers';
 
 type RouteDefinitions = {
   [route: string]: {
     params: Record<string, string | string[]>;
     api: {
+      typeSafe: boolean;
       method: RequestMethod;
       body: object;
-      routeParams: Record<string, string | string[]>;
+      routeParams: object;
       queryParams: object;
       cookies: object;
       data: object;
@@ -24,34 +23,40 @@ type RouteDefinitions = {
   };
 };
 
+// Create a function header that only applies if the route definition does not have any route params
+
+type RequestConfig<RouteData extends RouteDefinitions[keyof RouteDefinitions]> =
+  MakeObjectWithOptionalKeysUndefinable<
+    AddOptionalsToUndefined<
+      RemoveNever<{
+        options?: RequestInit;
+        baseUrl?: string;
+        params: EmptyRecordToNever<RouteData['params']>;
+        query: RouteData['api']['typeSafe'] extends true
+          ? ObjectToNever<RouteData['api']['queryParams']>
+          : Record<string, string | string[]> | undefined;
+        body: RouteData['api']['typeSafe'] extends true
+          ? ObjectToNever<RouteData['api']['body']>
+          : object | string | number | boolean | undefined;
+      }>
+    >
+  >;
+
 export function makeApiRequestFunction<Routes extends RouteDefinitions>(
   method: Routes[string]['api']['method'],
 ) {
-  return async function <
-    Route extends keyof Routes,
-    ThrowErrors extends boolean = true,
-  >(
+  return async function <Route extends keyof Routes>(
     route: Route,
-    data: RemoveNever<{
-      throwErrors?: ThrowErrors;
-      options?: RequestInit;
-      baseUrl?: string;
-      params: EmptyRecordToNever<Routes[Route]['params']>;
-      query: ObjectToNever<Routes[Route]['api']['queryParams']>;
-      body: ObjectToNever<Routes[Route]['api']['body']>;
-    }>,
-  ): Promise<
-    WithErrors<Routes[Route]['api']['data'], RequestError, ThrowErrors>
-  > {
+    data: RequestConfig<Routes[Route]>,
+  ): Promise<Routes[Route]['api']['data']> {
     const dataAny = data as any;
-    const shouldThrowErrors = dataAny.throwErrors ?? true;
 
     try {
       const query = new URLSearchParams(dataAny.query as any);
       const queryStr =
         query.toString().length > 0 ? '?' + query.toString() : '';
       const response = await fetch(
-        buildUrl(route as string, dataAny.params, data.baseUrl) + queryStr,
+        buildUrl(route as string, dataAny.params, dataAny.baseUrl) + queryStr,
         {
           method: method,
           headers: {
@@ -68,27 +73,26 @@ export function makeApiRequestFunction<Routes extends RouteDefinitions>(
       if (!response.ok) {
         const errorType = errorTypeFromCode(response.status);
         const message = await response.text();
-        const error = new RequestError(errorType, message);
+        let data = null;
+        try {
+          data = JSON.parse(message);
+        } catch {
+          data = null;
+        }
+
+        const error = new RequestError(errorType, message, data);
         throw error;
       }
 
-      const responseData = (await response.json()) as APIResponseWrapper<
-        Routes[Route]['api']['data']
-      >;
-
-      if (responseData.status === 'error') {
-        const error = new RequestError('server-error', responseData.message);
-        throw error;
-      }
-
-      return responseData.data as any;
+      const responseData =
+        (await response.json()) as Routes[Route]['api']['data'];
+      return responseData as any;
     } catch (e) {
       const error =
         e instanceof RequestError
           ? e
           : new RequestError('network-error', (e as Error).message);
-      if (shouldThrowErrors) throw error;
-      return { status: 'error', error: error } as any;
+      throw error;
     }
   };
 }
@@ -104,9 +108,11 @@ export type RequestErrorType =
 
 export class RequestError extends Error {
   public readonly type: RequestErrorType;
-  constructor(type: RequestErrorType, message: string) {
+  public readonly data?: any | null | { status: 'error'; message: string };
+  constructor(type: RequestErrorType, message: string, data?: any | null) {
     super(message);
     this.type = type;
+    this.data = data;
   }
 }
 

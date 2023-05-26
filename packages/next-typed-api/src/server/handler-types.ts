@@ -60,7 +60,3 @@ export type TRequestMethodHasBody = typeof RequestMethodHasBody;
 export type RequestMethodWithBody = {
   [K in RequestMethod]: TRequestMethodHasBody[K] extends true ? K : never;
 }[RequestMethod];
-
-export type APIResponseWrapper<Res> =
-  | { status: 'error'; message: string }
-  | { status: 'ok'; data: Res };

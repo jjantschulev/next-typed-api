@@ -54,11 +54,11 @@ export function makeApiRequestFunction<
     data: RequestConfig<Routes[Route], Method>,
     options?: RequestInit & { baseUrl?: string },
   ): Promise<Routes[Route]['api']['data']> {
-    const dataAny = data as any;
+    const dataAny = (data ?? {}) as any;
     const { baseUrl, ...fetchOptions } = options || {};
 
     try {
-      const query = new URLSearchParams(dataAny.query as any);
+      const query = new URLSearchParams(dataAny.query);
       const queryStr =
         query.toString().length > 0 ? '?' + query.toString() : '';
       const response = await fetch(
@@ -127,6 +127,10 @@ export class RequestError extends Error {
     super(parsedJson.message ?? message);
     this.type = type;
     this.data = data;
+  }
+
+  public toString() {
+    return `RequestError[${this.type}]: ${this.message}`;
   }
 }
 

@@ -94,13 +94,13 @@ export function codegen(
         .map(([method]) => {
           const mutation = `export const useApi${upperFirst(
             method,
-          )}Mutation = makeUseApiMutation<Routes${method}, '${method}'>('${method}', BASE_URL);`;
+          )}Mutation = makeUseApiMutation<Routes${method}, '${method}'>('${method}', useMutation, BASE_URL);`;
           if (IS_MUTATION[method as RequestMethod]) {
             return mutation;
           } else {
             const query = `export const useApi${upperFirst(
               method,
-            )}Query = makeUseApiQuery<Routes${method}, '${method}'>('${method}', BASE_URL);`;
+            )}Query = makeUseApiQuery<Routes${method}, '${method}'>('${method}', useQuery, BASE_URL);`;
             return [query, mutation];
           }
         })
@@ -113,7 +113,12 @@ export function codegen(
 
 import type { APIType } from "next-typed-api/client"
 import { makeApiRequestFunction, makeUseApiMutation, makeUseApiQuery } from "next-typed-api/client"
-  
+${
+  reactQuery
+    ? `import { useMutation, useQuery } from '@tanstack/react-query';`
+    : ''
+}  
+
 ${imports.join('\n')}
 
 const BASE_URL = ${baseUrl ? `'${baseUrl}'` : 'undefined'};

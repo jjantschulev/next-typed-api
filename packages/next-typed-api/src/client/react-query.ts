@@ -1,9 +1,10 @@
-import {
+import type {
   UseMutationOptions,
   UseQueryOptions,
-  useMutation,
-  useQuery,
-} from 'react-query';
+  useMutation as useMutationType,
+  useQuery as useQueryType,
+} from '@tanstack/react-query';
+
 import { RequestMethod } from '../server/handler-types';
 import {
   RequestConfig,
@@ -16,7 +17,11 @@ import {
 export function makeUseApiMutation<
   Routes extends RouteDefinitions,
   Method extends RequestMethod,
->(method: Method, buildTimeBaseUrl?: string) {
+>(
+  method: Method,
+  useMutation: typeof useMutationType,
+  buildTimeBaseUrl?: string,
+) {
   const mutateFunction = makeApiRequestFunction(method, buildTimeBaseUrl);
 
   return function <Route extends keyof Routes>(
@@ -37,7 +42,7 @@ export function makeUseApiMutation<
       RequestError,
       RequestConfig<Routes[Route], Method>
     >(
-      route as string,
+      [route],
       (variables) =>
         mutateFunction(
           route as string,
@@ -53,7 +58,11 @@ export function makeUseApiMutation<
 export function makeUseApiQuery<
   Routes extends RouteDefinitions,
   Method extends RequestMethod,
->(method: Routes[string]['api']['method'], buildTimeBaseUrl?: string) {
+>(
+  method: Routes[string]['api']['method'],
+  useQuery: typeof useQueryType,
+  buildTimeBaseUrl?: string,
+) {
   const getterFunction = makeApiRequestFunction(method, buildTimeBaseUrl);
 
   return function <Route extends keyof Routes>(
@@ -63,8 +72,7 @@ export function makeUseApiQuery<
       UseQueryOptions<
         Routes[Route]['api']['data'],
         RequestError,
-        Routes[Route]['api']['data'],
-        string
+        Routes[Route]['api']['data']
       >,
       'queryKey' | 'queryFn'
     > & {
@@ -81,10 +89,9 @@ export function makeUseApiQuery<
     const result = useQuery<
       Routes[Route]['api']['data'],
       RequestError,
-      RequestConfig<Routes[Route], Method>,
-      string
+      RequestConfig<Routes[Route], Method>
     >(
-      queryKey as string,
+      [queryKey],
       () => getterFunction(route as string, variables as any, fetchOptions),
       rest as any,
     );

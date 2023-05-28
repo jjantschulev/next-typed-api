@@ -7,6 +7,7 @@
   ],
   "extensions": [".ts", ".js", ".d.ts"],
   "ignoreUnresolved": [
+    "@tanstack/react-query",
     "next",
     "next/dist/shared/lib/constants",
     "next/server",

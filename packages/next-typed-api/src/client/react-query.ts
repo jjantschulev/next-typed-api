@@ -86,11 +86,7 @@ export function makeUseApiQuery<
       (variables as any)?.params,
       buildTimeBaseUrl,
     );
-    const result = useQuery<
-      Routes[Route]['api']['data'],
-      RequestError,
-      RequestConfig<Routes[Route], Method>
-    >(
+    const result = useQuery<Routes[Route]['api']['data'], RequestError>(
       [queryKey],
       () => getterFunction(route as string, variables as any, fetchOptions),
       rest as any,

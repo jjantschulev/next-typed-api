@@ -73,7 +73,7 @@ export type RemoveNever<T> = Pick<
     [K in keyof T]: T[K] extends never ? never : K;
   }[keyof T]
 >;
-export type ObjectToNever<T> = object extends T ? never : T;
+export type ObjectToNever<T> = object extends Required<T> ? never : T;
 export type EmptyRecordToNever<T> = Record<string, never> extends T ? never : T;
 
 export type PickUndefined<T> = {

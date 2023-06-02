@@ -1,7 +1,18 @@
 'use client';
 
 import { useEffect } from 'react';
-import { apiGet } from './next-typed-api-client';
+import {
+  BodyOfPost,
+  ParamsOfGet,
+  QueryOfGet,
+  TypeOfGet,
+  apiGet,
+} from './next-typed-api-client';
+
+type _T = TypeOfGet<'/api'>;
+type _B = BodyOfPost<'/api'>;
+type _Q = QueryOfGet<'/api'>;
+type _R = ParamsOfGet<'/api/:param'>;
 
 export default function Page() {
   useEffect(() => {

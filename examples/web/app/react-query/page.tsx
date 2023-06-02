@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback } from 'react';
 import { useApiGetQuery, useApiPostMutation } from '../next-typed-api-client';
 
 export default function Page() {
@@ -9,6 +10,11 @@ export default function Page() {
 
   const { mutate: login } = useApiPostMutation('/api/login');
   const { mutate: logout } = useApiPostMutation('/api/logout');
+  const { mutate: test } = useApiPostMutation('/api/:param');
+
+  const call = useCallback(() => {
+    test({ params: { param: 'test' }, body: { body: '23' } });
+  }, [test]);
 
   return (
     <div>

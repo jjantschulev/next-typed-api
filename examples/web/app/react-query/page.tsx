@@ -28,6 +28,9 @@ export default function Page() {
       <div>
         <button onClick={logout}>Logout</button>
       </div>
+      <div>
+        <button onClick={call}>Call</button>
+      </div>
     </div>
   );
 }

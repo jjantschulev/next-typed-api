@@ -71,7 +71,7 @@ export abstract class UseFinishRequest<
       const headers = new Headers();
       try {
         const { body, query, cookies, params } =
-          this.getBaseHandler().parseRequest(req, { params: rawParams });
+          await this.getBaseHandler().parseRequest(req, { params: rawParams });
 
         const realBody = body as Method extends RequestMethodWithBody
           ? z.TypeOf<Body>

@@ -1,19 +1,19 @@
-import { z } from "zod";
+import { z } from 'zod';
 import {
   EmptyZodObject,
   NextJSRequestHandler,
   RequestMethod,
   RequestMethodHasBody,
   RouteParamsBase,
-} from "./handler-types";
-import { Expand, ExtendZodObject, MergeZodObjects } from "./type-helpers";
-import { UseFinishRequest } from "./use-finish-request";
+} from './handler-types';
+import { Expand, ExtendZodObject, MergeZodObjects } from './type-helpers';
+import { UseFinishRequest } from './use-finish-request';
 
 export class BaseRequestHandler<
   RouteParams extends RouteParamsBase = object,
   QueryParams extends z.SomeZodObject = EmptyZodObject,
   Cookies extends z.SomeZodObject = EmptyZodObject,
-  Body extends z.SomeZodObject = EmptyZodObject
+  Body extends z.SomeZodObject = EmptyZodObject,
 > extends UseFinishRequest<
   RouteParams,
   QueryParams,
@@ -39,7 +39,7 @@ export class BaseRequestHandler<
   constructor(
     queryParamsSchema: QueryParams,
     cookieSchema: Cookies,
-    bodySchema: Body
+    bodySchema: Body,
   ) {
     super();
     this.queryParamsSchema = queryParamsSchema;
@@ -61,7 +61,7 @@ export class BaseRequestHandler<
 
   public catchAllParams<RP extends string>(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _segment: RP
+    _segment: RP,
   ): BaseRequestHandler<
     Expand<{ [K in RP]: string[] } & RouteParams>,
     QueryParams,
@@ -104,9 +104,9 @@ export class BaseRequestHandler<
     R extends RouteParamsBase,
     Q extends z.AnyZodObject,
     C extends z.AnyZodObject,
-    B extends z.AnyZodObject
+    B extends z.AnyZodObject,
   >(
-    other: BaseRequestHandler<R, Q, C, B>
+    other: BaseRequestHandler<R, Q, C, B>,
   ): BaseRequestHandler<
     RouteParams & R,
     MergeZodObjects<QueryParams, Q>,
@@ -125,22 +125,23 @@ export class BaseRequestHandler<
     >(mergedQ, mergedC, mergedB) as never;
   }
 
-  public parseRequest(
+  public async parseRequest(
     ...[req, { params }]: Parameters<NextJSRequestHandler<RouteParams>>
-  ): {
+  ): Promise<{
     query: z.infer<QueryParams>;
     body: z.infer<Body>;
     cookies: z.infer<Cookies>;
     params: RouteParams;
-  } {
+  }> {
     const query = this.queryParamsSchema.parse(
-      Object.fromEntries(req.nextUrl.searchParams.entries())
+      Object.fromEntries(req.nextUrl.searchParams.entries()),
     );
     const method = req.method as RequestMethod;
     const hasBody = RequestMethodHasBody[method];
     let body = {};
     if (hasBody) {
-      body = this.bodySchema.parse(req.body);
+      const bodyData = await req.json();
+      body = this.bodySchema.parse(bodyData);
     }
     const cookiesObject: Record<string, string | string[]> = {};
     for (const [key, cookie] of req.cookies) {

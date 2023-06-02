@@ -13,7 +13,7 @@ export const POST = api()
   .params('param')
   .body({ body: z.string().optional() })
   .use(logging)
-  .post(({ params }) => {
-    console.log('params', params);
-    return { params };
+  .post(({ params, body }) => {
+    console.log('params', params, body);
+    return { params, body };
   });

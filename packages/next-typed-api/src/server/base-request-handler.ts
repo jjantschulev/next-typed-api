@@ -140,7 +140,7 @@ export class BaseRequestHandler<
     const hasBody = RequestMethodHasBody[method];
     let body = {};
     if (hasBody) {
-      const bodyData = await req.json();
+      const bodyData = await req.json().catch(() => ({}));
       body = this.bodySchema.parse(bodyData);
     }
     const cookiesObject: Record<string, string | string[]> = {};

@@ -85,7 +85,7 @@ export function codegen(
     .map(([method]) => {
       return `export const api${upperFirst(
         method,
-      )} = makeApiRequestFunction<Routes${method}, '${method}'>('${method}');`;
+      )} = makeApiRequestFunction<Routes${method}, '${method}'>('${method}', BASE_URL);`;
     });
 
   const reactQueryFunctions = reactQuery

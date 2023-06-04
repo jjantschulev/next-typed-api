@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import {
   BodyOfPost,
+  GetRoute,
   ParamsOfGet,
   QueryOfGet,
   TypeOfGet,
@@ -13,6 +14,8 @@ type _T = TypeOfGet<'/api'>;
 type _B = BodyOfPost<'/api'>;
 type _Q = QueryOfGet<'/api'>;
 type _R = ParamsOfGet<'/api/:param'>;
+
+const myRoute: GetRoute = '/api/hello';
 
 export default function Page() {
   useEffect(() => {

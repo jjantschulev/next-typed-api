@@ -123,6 +123,7 @@ export function codegen(
         `export type QueryOf${upperFirst(
           method,
         )}<T extends keyof Routes${method}> = Routes${method}[T]['api']['queryParams'];`,
+        `export type ${upperFirst(method)}Route = keyof Routes${method};`,
       ].join('\n');
     });
 

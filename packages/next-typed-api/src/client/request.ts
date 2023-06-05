@@ -11,6 +11,11 @@ import type {
   RemoveNever,
 } from '../server/type-helpers';
 
+export type UrlOverrides = {
+  overrideOrigin?: string;
+  serverSideOrigin?: string;
+};
+
 export type RouteDefinitions = {
   [route: string]: {
     params: Record<string, string | string[]>;
@@ -48,22 +53,25 @@ export type RequestConfig<
 export function makeApiRequestFunction<
   Routes extends RouteDefinitions,
   Method extends RequestMethod,
->(method: Method, buildTimeBaseUrl?: string) {
+>(method: Method, { overrideOrigin, serverSideOrigin }: UrlOverrides = {}) {
   return async function <Route extends keyof Routes>(
     route: Route,
     data: RequestConfig<Routes[Route], Method>,
-    options?: RequestInit & { baseUrl?: string },
+    options?: RequestInit & { overrideOrigin?: string },
   ): Promise<Routes[Route]['api']['data']> {
     const dataAny = (data ?? {}) as any;
-    const { baseUrl, ...fetchOptions } = options || {};
+    const { overrideOrigin: customOverrideOrigin, ...fetchOptions } =
+      options || {};
 
     try {
       const query = new URLSearchParams(dataAny.query);
       const queryStr =
         query.toString().length > 0 ? '?' + query.toString() : '';
       const response = await fetch(
-        buildUrl(route as string, dataAny.params, baseUrl ?? buildTimeBaseUrl) +
-          queryStr,
+        buildUrl(route as string, dataAny.params, {
+          overrideOrigin: customOverrideOrigin ?? overrideOrigin,
+          serverSideOrigin,
+        }) + queryStr,
         {
           method: method,
           headers: {
@@ -146,7 +154,7 @@ function errorTypeFromCode(code: number): RequestErrorType {
 export function buildUrl(
   path: string,
   params: Record<string, string | string[]>,
-  baseUrl?: string,
+  { overrideOrigin, serverSideOrigin }: UrlOverrides = {},
 ) {
   const parts = path.split('/');
   const url = parts
@@ -163,9 +171,21 @@ export function buildUrl(
     })
     .join('/');
 
-  if (baseUrl) {
-    const urlObj = new URL(url, baseUrl);
-    return urlObj.toString();
-  }
-  return url;
+  const baseOrigin =
+    typeof window === 'undefined' ? serverSideOrigin : window.location.origin;
+  const actualOrigin = overrideOrigin ?? baseOrigin;
+
+  const urlObj = new URL(url, actualOrigin);
+  return urlObj.toString();
+}
+
+export function makeBuildUrlFunction<Routes extends RouteDefinitions>(
+  urlOverrides: UrlOverrides = {},
+) {
+  return function <Route extends keyof Routes>(
+    route: Route,
+    variables: Routes[Route]['params'],
+  ) {
+    return buildUrl(route as string, variables, urlOverrides);
+  };
 }

@@ -1,7 +1,13 @@
 import { apiGet } from '../next-typed-api-client';
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
-  const data = await apiGet('/api/hello/:id', { params: { id: '123' } });
+  const data = await apiGet(
+    '/api/hello/:id',
+    { params: { id: '123' } },
+    { cache: 'no-cache', next: { revalidate: 0 } },
+  );
 
   return (
     <div>

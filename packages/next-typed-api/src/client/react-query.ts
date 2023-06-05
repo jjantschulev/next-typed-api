@@ -10,6 +10,7 @@ import {
   RequestConfig,
   RequestError,
   RouteDefinitions,
+  UrlOverrides,
   buildUrl,
   makeApiRequestFunction,
 } from './request';
@@ -20,9 +21,9 @@ export function makeUseApiMutation<
 >(
   method: Method,
   useMutation: typeof useMutationType,
-  buildTimeBaseUrl?: string,
+  urlOverrides: UrlOverrides = {},
 ) {
-  const mutateFunction = makeApiRequestFunction(method, buildTimeBaseUrl);
+  const mutateFunction = makeApiRequestFunction(method, urlOverrides);
 
   return function <Route extends keyof Routes>(
     route: Route,
@@ -61,9 +62,9 @@ export function makeUseApiQuery<
 >(
   method: Routes[string]['api']['method'],
   useQuery: typeof useQueryType,
-  buildTimeBaseUrl?: string,
+  urlOverrides: UrlOverrides = {},
 ) {
-  const getterFunction = makeApiRequestFunction(method, buildTimeBaseUrl);
+  const getterFunction = makeApiRequestFunction(method, urlOverrides);
 
   return function <Route extends keyof Routes>(
     route: Route,
@@ -84,7 +85,7 @@ export function makeUseApiQuery<
     const queryKey = buildUrl(
       route as string,
       (variables as any)?.params,
-      buildTimeBaseUrl,
+      urlOverrides,
     );
     const result = useQuery<Routes[Route]['api']['data'], RequestError>(
       [queryKey],

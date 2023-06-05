@@ -56,4 +56,14 @@ function watchAllFiles(
   });
 }
 
+export const vercelServerSideOrigin = (devPort?: number | string) => {
+  // eslint-disable-next-line turbo/no-undeclared-env-vars
+  const port = devPort?.toString() || process.env.PORT || '3000';
+  // eslint-disable-next-line turbo/no-undeclared-env-vars
+  return process.env.VERCEL_URL
+    ? // eslint-disable-next-line turbo/no-undeclared-env-vars
+      `https://${process.env.VERCEL_URL}`
+    : `http://localhost:${port}`;
+};
+
 export default withTypedApi;

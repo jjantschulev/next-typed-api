@@ -1,13 +1,13 @@
 import { readFile, stat, writeFile } from 'fs/promises';
 import { join } from 'path';
+import { UrlOverrides } from '../client/request';
 import { codegen } from './codegen';
 import { getApiPaths, parseDir } from './parse-appdir';
 
 export type BuildConfig = {
   basePath: string;
   reactQuery?: boolean;
-  baseUrl?: string;
-};
+} & UrlOverrides;
 
 export async function build(config: BuildConfig) {
   const { basePath: cBasePath } = config;

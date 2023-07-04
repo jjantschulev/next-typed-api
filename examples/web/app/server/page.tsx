@@ -1,4 +1,4 @@
-import { apiGet } from '../next-typed-api-client';
+import { apiGet } from '../next-typed-api.server';
 
 export const dynamic = 'force-dynamic';
 

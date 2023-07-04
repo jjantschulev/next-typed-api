@@ -37,4 +37,5 @@ next-env.d.ts
 
 
 # Added by next-typed-api automatically
-next-typed-api-client.ts
+next-typed-api.server.ts
+next-typed-api.client.ts

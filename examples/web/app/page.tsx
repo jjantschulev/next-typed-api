@@ -8,7 +8,7 @@ import {
   QueryOfGet,
   TypeOfGet,
   apiGet,
-} from './next-typed-api-client';
+} from './next-typed-api.server';
 
 type _T = TypeOfGet<'/api'>;
 type _B = BodyOfPost<'/api'>;

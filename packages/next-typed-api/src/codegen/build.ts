@@ -37,25 +37,34 @@ export async function build(config: BuildConfig) {
   });
   const urls = appDir ? await getApiPaths(appDir) : [];
 
-  const code = codegen(urls, startDir, config);
+  const { serverFile, clientFile } = codegen(urls, startDir, config);
 
-  await writeFile(join(startDir, 'next-typed-api-client.ts'), code, {
+  await writeFile(join(startDir, 'next-typed-api.server.ts'), serverFile, {
     encoding: 'utf-8',
   });
+  await writeFile(join(startDir, 'next-typed-api.client.ts'), clientFile, {
+    encoding: 'utf-8',
+  });
+
   await modifyGitignore();
 
-  console.log('Generated next-typed-api-client.ts');
+  console.log(
+    'Generated next-typed-api.server.ts and next-typed-api.client.ts',
+  );
 }
 
 async function modifyGitignore() {
   try {
     const gitignorePath = join(process.cwd(), '.gitignore');
     const gitignore = await readFile(gitignorePath, { encoding: 'utf-8' });
-    if (!gitignore.includes('next-typed-api-client.ts')) {
+    if (
+      !gitignore.includes('next-typed-api.server.ts') ||
+      !gitignore.includes('next-typed-api.client.ts')
+    ) {
       await writeFile(
         gitignorePath,
         gitignore +
-          '\n\n# Added by next-typed-api automatically\nnext-typed-api-client.ts\n',
+          '\n\n# Added by next-typed-api automatically\nnext-typed-api.server.ts\nnext-typed-api.client.ts\n',
         {
           encoding: 'utf-8',
         },

@@ -98,11 +98,11 @@ Each `api` function call represents a new API route. The `.query`, `.body`, and 
 
 ### Making requests
 
-To make requests to your API routes from your Next.js application, you can use the `apiGET` function provided by the `next-typed-api-client`:
+To make requests to your API routes from your Next.js application, you can use the `apiGET` function provided by the `next-typed-api.client` and `next-typed-api.server`:
 
 ```typescript
 import { useEffect } from 'react';
-import { apiGET } from './next-typed-api-client';
+import { apiGET } from './next-typed-api.server';
 
 export default function Page() {
   useEffect(() => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useApiGetQuery, useApiPostMutation } from '../next-typed-api-client';
+import { useApiGetQuery, useApiPostMutation } from '../next-typed-api.client';
 
 export default function Page() {
   const { data, error, isLoading } = useApiGetQuery('/api', {

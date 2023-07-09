@@ -1,4 +1,5 @@
-import { z } from 'zod';
+import { NextRequest, NextResponse } from 'next/server';
+import { ZodObject, ZodRawShape, z } from 'zod';
 import {
   EmptyZodObject,
   NextJSRequestHandler,
@@ -6,14 +7,29 @@ import {
   RequestMethodHasBody,
   RouteParamsBase,
 } from './handler-types';
-import { Expand, ExtendZodObject, MergeZodObjects } from './type-helpers';
+import {
+  Expand,
+  ExtendZodObject,
+  IgnoreRequestBody,
+  InferBodyType,
+  MergeValidBodyTypes,
+  MergeZodObjects,
+  ValidBodyTypeClasses,
+  ValidBodyTypes,
+} from './type-helpers';
 import { UseFinishRequest } from './use-finish-request';
+
+export type ParseErrorHandler<RouteParams extends RouteParamsBase> = (data: {
+  req: NextRequest;
+  params: RouteParams;
+  error: any;
+}) => Promise<NextResponse> | NextResponse;
 
 export class BaseRequestHandler<
   RouteParams extends RouteParamsBase = object,
   QueryParams extends z.SomeZodObject = EmptyZodObject,
   Cookies extends z.SomeZodObject = EmptyZodObject,
-  Body extends z.SomeZodObject = EmptyZodObject,
+  Body extends ValidBodyTypes = IgnoreRequestBody,
 > extends UseFinishRequest<
   RouteParams,
   QueryParams,
@@ -25,6 +41,8 @@ export class BaseRequestHandler<
   private queryParamsSchema: QueryParams;
   private bodySchema: Body;
   private cookieSchema: Cookies;
+  private parseErrorHandler: ParseErrorHandler<RouteParams> | undefined =
+    undefined;
 
   getBaseHandler() {
     return this;
@@ -40,11 +58,13 @@ export class BaseRequestHandler<
     queryParamsSchema: QueryParams,
     cookieSchema: Cookies,
     bodySchema: Body,
+    parseErrorHandler?: ParseErrorHandler<RouteParams>,
   ) {
     super();
     this.queryParamsSchema = queryParamsSchema;
     this.bodySchema = bodySchema;
     this.cookieSchema = cookieSchema;
+    this.parseErrorHandler = parseErrorHandler;
   }
 
   public params<RP extends string>(
@@ -59,6 +79,19 @@ export class BaseRequestHandler<
     return this as never;
   }
 
+  public onParseError(handler: ParseErrorHandler<RouteParams>) {
+    return new BaseRequestHandler<RouteParams, QueryParams, Cookies, Body>(
+      this.queryParamsSchema,
+      this.cookieSchema,
+      this.bodySchema,
+      handler,
+    );
+  }
+
+  public get parseErrorHandlerFunction() {
+    return this.parseErrorHandler;
+  }
+
   public catchAllParams<RP extends string>(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _segment: RP,
@@ -71,50 +104,91 @@ export class BaseRequestHandler<
     return this as never;
   }
 
-  public query<O extends z.ZodRawShape>(schema: O) {
-    const merged = this.queryParamsSchema.extend(schema);
+  public query<O extends z.ZodRawShape>(schema: O | ZodObject<O>) {
+    const merged = this.queryParamsSchema.extend(
+      getSchemaFromZodObjectOrDef(schema),
+    );
     return new BaseRequestHandler<
       RouteParams,
       ExtendZodObject<QueryParams, O>,
       Cookies,
       Body
-    >(merged as never, this.cookieSchema, this.bodySchema);
+    >(
+      merged as never,
+      this.cookieSchema,
+      this.bodySchema,
+      this.parseErrorHandler,
+    );
   }
-  public cookies<O extends z.ZodRawShape>(schema: O) {
-    const merged = this.cookieSchema.extend(schema);
+  public cookies<O extends z.ZodRawShape>(schema: O | ZodObject<O>) {
+    const merged = this.cookieSchema.extend(
+      getSchemaFromZodObjectOrDef(schema),
+    );
     return new BaseRequestHandler<
       RouteParams,
       QueryParams,
       ExtendZodObject<Cookies, O>,
       Body
-    >(this.queryParamsSchema, merged as never, this.bodySchema);
+    >(
+      this.queryParamsSchema,
+      merged as never,
+      this.bodySchema,
+      this.parseErrorHandler,
+    );
   }
 
-  public body<O extends z.ZodRawShape>(schema: O) {
-    const merged = this.bodySchema.extend(schema);
-    return new BaseRequestHandler<
-      RouteParams,
-      QueryParams,
-      Cookies,
-      ExtendZodObject<Body, O>
-    >(this.queryParamsSchema, this.cookieSchema, merged as never);
+  public body<O>(
+    schema: O,
+  ): O extends ValidBodyTypes
+    ? BaseRequestHandler<
+        RouteParams,
+        QueryParams,
+        Cookies,
+        MergeValidBodyTypes<Body, O>
+      >
+    : O extends ZodRawShape
+    ? BaseRequestHandler<
+        RouteParams,
+        QueryParams,
+        Cookies,
+        MergeValidBodyTypes<Body, ZodObject<O>>
+      >
+    : never {
+    let schemaAny = schema as any;
+    let isValidClass = false;
+    for (const typeClass of ValidBodyTypeClasses) {
+      if (schema instanceof typeClass) {
+        isValidClass = true;
+      }
+    }
+    if (!isValidClass && typeof schemaAny === 'object') {
+      schemaAny = z.object(schemaAny);
+    }
+    const merged = mergeValidBodyTypes(this.bodySchema, schemaAny);
+
+    return new BaseRequestHandler(
+      this.queryParamsSchema,
+      this.cookieSchema,
+      merged,
+      this.parseErrorHandler,
+    ) as never;
   }
 
   public extend<
     R extends RouteParamsBase,
     Q extends z.AnyZodObject,
     C extends z.AnyZodObject,
-    B extends z.AnyZodObject,
+    B extends ValidBodyTypes,
   >(
     other: BaseRequestHandler<R, Q, C, B>,
   ): BaseRequestHandler<
     RouteParams & R,
     MergeZodObjects<QueryParams, Q>,
     MergeZodObjects<Cookies, C>,
-    MergeZodObjects<Body, B>
+    MergeValidBodyTypes<Body, B>
   > {
     const mergedQ = this.queryParamsSchema.merge(other.queryParamsSchema);
-    const mergedB = this.bodySchema.merge(other.bodySchema);
+    const mergedB = mergeValidBodyTypes(this.bodySchema, other.bodySchema);
     const mergedC = this.cookieSchema.merge(other.cookieSchema);
 
     return new BaseRequestHandler<
@@ -122,14 +196,19 @@ export class BaseRequestHandler<
       typeof mergedQ,
       typeof mergedC,
       typeof mergedB
-    >(mergedQ, mergedC, mergedB) as never;
+    >(
+      mergedQ,
+      mergedC,
+      mergedB,
+      other.parseErrorHandler ?? this.parseErrorHandler,
+    ) as never;
   }
 
   public async parseRequest(
     ...[req, { params }]: Parameters<NextJSRequestHandler<RouteParams>>
   ): Promise<{
     query: z.infer<QueryParams>;
-    body: z.infer<Body>;
+    body: InferBodyType<Body>;
     cookies: z.infer<Cookies>;
     params: RouteParams;
   }> {
@@ -138,8 +217,8 @@ export class BaseRequestHandler<
     );
     const method = req.method as RequestMethod;
     const hasBody = RequestMethodHasBody[method];
-    let body = {};
-    if (hasBody) {
+    let body = undefined;
+    if (hasBody && !(this.bodySchema instanceof IgnoreRequestBody)) {
       const bodyData = await req.json().catch(() => ({}));
       body = this.bodySchema.parse(bodyData);
     }
@@ -160,5 +239,32 @@ export class BaseRequestHandler<
 
   getRequirements() {
     return this;
+  }
+}
+
+function mergeValidBodyTypes<
+  A extends ValidBodyTypes,
+  B extends ValidBodyTypes,
+>(a: A, b: B): MergeValidBodyTypes<A, B> {
+  if (a instanceof IgnoreRequestBody) {
+    return b as any;
+  }
+  if (b instanceof IgnoreRequestBody) {
+    return a as any;
+  }
+
+  if (a instanceof ZodObject && b instanceof ZodObject) {
+    return a.merge(b) as any;
+  }
+  return b as any;
+}
+
+function getSchemaFromZodObjectOrDef<T extends ZodRawShape>(
+  schema: T | ZodObject<T>,
+) {
+  if (schema instanceof ZodObject) {
+    return schema._def.shape();
+  } else {
+    return schema;
   }
 }

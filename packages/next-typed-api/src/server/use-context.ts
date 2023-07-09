@@ -1,23 +1,27 @@
-import { NextResponse } from "next/server";
-import { z } from "zod";
-import { BaseRequestHandler } from "./base-request-handler";
-import type { FullRequestHandler } from "./full-request-handler";
-import { ContextBase, RequestHandler, RouteParamsBase } from "./handler-types";
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { BaseRequestHandler } from './base-request-handler';
+import type { FullRequestHandler } from './full-request-handler';
+import { ContextBase, RequestHandler, RouteParamsBase } from './handler-types';
 import {
+  BodyTypesDontConflict,
   Expand,
+  InferBodyType,
   MergeTypes,
+  MergeValidBodyTypes,
   MergeZodObjects,
   TripleMerge,
+  ValidBodyTypes,
   ZodObjectsDontConflict,
-} from "./type-helpers";
+} from './type-helpers';
 
 export abstract class UseContext<
   RouteParams extends RouteParamsBase,
   QueryParams extends z.SomeZodObject,
   Cookies extends z.SomeZodObject,
-  Body extends z.SomeZodObject,
+  Body extends ValidBodyTypes,
   InputContext extends ContextBase,
-  OutputContext extends ContextBase
+  OutputContext extends ContextBase,
 > {
   protected constructor() {
     /* */
@@ -34,7 +38,7 @@ export abstract class UseContext<
     RouteParams,
     z.TypeOf<QueryParams>,
     z.TypeOf<Cookies>,
-    z.TypeOf<Body>,
+    InferBodyType<Body>,
     InputContext,
     OutputContext
   >;
@@ -44,10 +48,10 @@ export abstract class UseContext<
       RouteParams,
       z.TypeOf<QueryParams>,
       z.TypeOf<Cookies>,
-      z.TypeOf<Body>,
+      InferBodyType<Body>,
       MergeTypes<InputContext, OutputContext>,
       Out | undefined | void
-    >
+    >,
   ): FullRequestHandler<
     RouteParams,
     QueryParams,
@@ -60,7 +64,7 @@ export abstract class UseContext<
     const myContextFunction = this.getContextFunction();
 
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { FullRequestHandler: FRH } = require("./full-request-handler");
+    const { FullRequestHandler: FRH } = require('./full-request-handler');
     return new FRH(newBase, async (data: any) => {
       const first = await myContextFunction(data);
       if (first instanceof NextResponse) return first;
@@ -83,22 +87,22 @@ export abstract class UseContext<
     RouteParams2 extends object,
     QueryParams2 extends z.AnyZodObject,
     Cookies2 extends z.AnyZodObject,
-    Body2 extends z.AnyZodObject,
-    OutputContext2 extends ContextBase
+    Body2 extends ValidBodyTypes,
+    OutputContext2 extends ContextBase,
   >(
     api: UseContext<
       RouteParams2,
       ZodObjectsDontConflict<QueryParams2, QueryParams>,
       ZodObjectsDontConflict<Cookies2, Cookies>,
-      ZodObjectsDontConflict<Body2, Body>,
+      BodyTypesDontConflict<Body2, Body>,
       MergeTypes<InputContext, OutputContext>,
       OutputContext2
-    >
+    >,
   ): FullRequestHandler<
     Expand<RouteParams & RouteParams2>,
     MergeZodObjects<QueryParams, QueryParams2>,
     MergeZodObjects<Cookies, Cookies2>,
-    MergeZodObjects<Body, Body2>,
+    MergeValidBodyTypes<Body, Body2>,
     InputContext,
     TripleMerge<InputContext, OutputContext, OutputContext2>
   > {
@@ -109,8 +113,8 @@ export abstract class UseContext<
     const reqHandler: RequestHandler<
       RouteParams & RouteParams2,
       z.TypeOf<MergeZodObjects<QueryParams, QueryParams2>>,
-      z.TypeOf<MergeZodObjects<QueryParams, Cookies2>>,
-      z.TypeOf<MergeZodObjects<QueryParams, Body2>>,
+      z.TypeOf<MergeZodObjects<Cookies, Cookies2>>,
+      InferBodyType<MergeValidBodyTypes<Body, Body2>>,
       InputContext,
       TripleMerge<InputContext, OutputContext, OutputContext2>
     > = async (data) => {
@@ -134,7 +138,7 @@ export abstract class UseContext<
     };
 
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { FullRequestHandler: FRH } = require("./full-request-handler");
+    const { FullRequestHandler: FRH } = require('./full-request-handler');
     return new FRH(newBase, reqHandler as never) as never;
   }
 
@@ -143,10 +147,10 @@ export abstract class UseContext<
       RouteParams,
       z.TypeOf<QueryParams>,
       z.TypeOf<Cookies>,
-      z.TypeOf<Body>,
+      InferBodyType<Body>,
       MergeTypes<InputContext, OutputContext>,
       Out | undefined | void
-    >
+    >,
   ): FullRequestHandler<
     RouteParams,
     QueryParams,
@@ -160,21 +164,21 @@ export abstract class UseContext<
     RouteParams2 extends object,
     QueryParams2 extends z.AnyZodObject,
     Cookies2 extends z.AnyZodObject,
-    Body2 extends z.AnyZodObject
+    Body2 extends ValidBodyTypes,
   >(
     api: UseContext<
       RouteParams2,
       ZodObjectsDontConflict<QueryParams2, QueryParams>,
       ZodObjectsDontConflict<Cookies2, Cookies>,
-      ZodObjectsDontConflict<Body2, Body>,
+      BodyTypesDontConflict<Body2, Body>,
       MergeTypes<InputContext, OutputContext>,
       Out
-    >
+    >,
   ): FullRequestHandler<
     Expand<RouteParams & RouteParams2>,
     MergeZodObjects<QueryParams, QueryParams2>,
     MergeZodObjects<Cookies, Cookies2>,
-    MergeZodObjects<Body, Body2>,
+    MergeValidBodyTypes<Body, Body2>,
     InputContext,
     TripleMerge<InputContext, OutputContext, Out>
   >;
@@ -183,14 +187,14 @@ export abstract class UseContext<
     RouteParams2 extends object,
     QueryParams2 extends z.AnyZodObject,
     Cookies2 extends z.AnyZodObject,
-    Body2 extends z.AnyZodObject
+    Body2 extends ValidBodyTypes,
   >(
     arg:
       | RequestHandler<
           RouteParams,
           z.TypeOf<QueryParams>,
           z.TypeOf<Cookies>,
-          z.TypeOf<Body>,
+          InferBodyType<Body>,
           MergeTypes<InputContext, OutputContext>,
           Out | undefined | void
         >
@@ -198,10 +202,10 @@ export abstract class UseContext<
           RouteParams2,
           ZodObjectsDontConflict<QueryParams2, QueryParams>,
           ZodObjectsDontConflict<Cookies2, Cookies>,
-          ZodObjectsDontConflict<Body2, Body>,
+          BodyTypesDontConflict<Body2, Body>,
           MergeTypes<InputContext, OutputContext>,
           Out
-        >
+        >,
   ):
     | FullRequestHandler<
         RouteParams,
@@ -215,11 +219,11 @@ export abstract class UseContext<
         Expand<RouteParams & RouteParams2>,
         MergeZodObjects<QueryParams, QueryParams2>,
         MergeZodObjects<Cookies, Cookies2>,
-        MergeZodObjects<Body, Body2>,
+        MergeValidBodyTypes<Body, Body2>,
         InputContext,
         TripleMerge<InputContext, OutputContext, Out>
       > {
-    if (typeof arg === "function") {
+    if (typeof arg === 'function') {
       return this.useFn(arg);
     }
     return this.useFullApi(arg);

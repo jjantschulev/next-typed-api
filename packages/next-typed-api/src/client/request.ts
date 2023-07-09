@@ -22,7 +22,7 @@ export type RouteDefinitions = {
     api: {
       typeSafe: boolean;
       method: RequestMethod;
-      body: object;
+      body: object | undefined;
       routeParams: object;
       queryParams: object;
       cookies: object;

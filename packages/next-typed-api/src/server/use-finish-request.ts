@@ -84,8 +84,31 @@ export abstract class UseFinishRequest<
       let res;
       const headers = new Headers();
       try {
-        const { body, query, cookies, params } =
-          await this.getBaseHandler().parseRequest(req, { params: rawParams });
+        let body: InferBodyType<Body>,
+          query: z.TypeOf<QueryParams>,
+          cookies: z.TypeOf<Cookies>,
+          params: RouteParams;
+        try {
+          const {
+            body: b,
+            query: q,
+            cookies: c,
+            params: p,
+          } = await this.getBaseHandler().parseRequest(req, {
+            params: rawParams,
+          });
+          body = b;
+          query = q;
+          cookies = c;
+          params = p;
+        } catch (error) {
+          const handlerFunc = this.getBaseHandler().parseErrorHandlerFunction;
+          if (handlerFunc) {
+            const res = await handlerFunc({ req, params: rawParams, error });
+            return res;
+          }
+          throw error;
+        }
 
         const context = await this.getContextFunction()({
           params,

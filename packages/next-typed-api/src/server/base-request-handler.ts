@@ -1,3 +1,4 @@
+import { NextRequest, NextResponse } from 'next/server';
 import { ZodObject, ZodRawShape, z } from 'zod';
 import {
   EmptyZodObject,
@@ -18,6 +19,12 @@ import {
 } from './type-helpers';
 import { UseFinishRequest } from './use-finish-request';
 
+export type ParseErrorHandler<RouteParams extends RouteParamsBase> = (data: {
+  req: NextRequest;
+  params: RouteParams;
+  error: any;
+}) => Promise<NextResponse> | NextResponse;
+
 export class BaseRequestHandler<
   RouteParams extends RouteParamsBase = object,
   QueryParams extends z.SomeZodObject = EmptyZodObject,
@@ -34,6 +41,8 @@ export class BaseRequestHandler<
   private queryParamsSchema: QueryParams;
   private bodySchema: Body;
   private cookieSchema: Cookies;
+  private parseErrorHandler: ParseErrorHandler<RouteParams> | undefined =
+    undefined;
 
   getBaseHandler() {
     return this;
@@ -49,11 +58,13 @@ export class BaseRequestHandler<
     queryParamsSchema: QueryParams,
     cookieSchema: Cookies,
     bodySchema: Body,
+    parseErrorHandler?: ParseErrorHandler<RouteParams>,
   ) {
     super();
     this.queryParamsSchema = queryParamsSchema;
     this.bodySchema = bodySchema;
     this.cookieSchema = cookieSchema;
+    this.parseErrorHandler = parseErrorHandler;
   }
 
   public params<RP extends string>(
@@ -66,6 +77,19 @@ export class BaseRequestHandler<
     Body
   > {
     return this as never;
+  }
+
+  public onParseError(handler: ParseErrorHandler<RouteParams>) {
+    return new BaseRequestHandler<RouteParams, QueryParams, Cookies, Body>(
+      this.queryParamsSchema,
+      this.cookieSchema,
+      this.bodySchema,
+      handler,
+    );
+  }
+
+  public get parseErrorHandlerFunction() {
+    return this.parseErrorHandler;
   }
 
   public catchAllParams<RP extends string>(
@@ -89,7 +113,12 @@ export class BaseRequestHandler<
       ExtendZodObject<QueryParams, O>,
       Cookies,
       Body
-    >(merged as never, this.cookieSchema, this.bodySchema);
+    >(
+      merged as never,
+      this.cookieSchema,
+      this.bodySchema,
+      this.parseErrorHandler,
+    );
   }
   public cookies<O extends z.ZodRawShape>(schema: O | ZodObject<O>) {
     const merged = this.cookieSchema.extend(
@@ -100,7 +129,12 @@ export class BaseRequestHandler<
       QueryParams,
       ExtendZodObject<Cookies, O>,
       Body
-    >(this.queryParamsSchema, merged as never, this.bodySchema);
+    >(
+      this.queryParamsSchema,
+      merged as never,
+      this.bodySchema,
+      this.parseErrorHandler,
+    );
   }
 
   public body<O>(
@@ -136,6 +170,7 @@ export class BaseRequestHandler<
       this.queryParamsSchema,
       this.cookieSchema,
       merged,
+      this.parseErrorHandler,
     ) as never;
   }
 
@@ -161,7 +196,12 @@ export class BaseRequestHandler<
       typeof mergedQ,
       typeof mergedC,
       typeof mergedB
-    >(mergedQ, mergedC, mergedB) as never;
+    >(
+      mergedQ,
+      mergedC,
+      mergedB,
+      other.parseErrorHandler ?? this.parseErrorHandler,
+    ) as never;
   }
 
   public async parseRequest(

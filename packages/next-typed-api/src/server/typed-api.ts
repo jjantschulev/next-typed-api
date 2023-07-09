@@ -6,6 +6,7 @@ import {
   RequestMethod,
   RequestMethodHasBody,
 } from './handler-types';
+import { IgnoreRequestBody } from './type-helpers';
 
 type UntypedAPIType<RouteParams = Record<string, string | string[]>> = {
   typeSafe: false;
@@ -45,9 +46,13 @@ export type APIType<T> = T extends (
   : UntypedAPIType;
 
 export { redirect } from './errors';
-export type { RequestMethod };
 export { RequestMethodHasBody };
+export type { RequestMethod };
 
 export function api() {
-  return new BaseRequestHandler(z.object({}), z.object({}), z.object({}));
+  return new BaseRequestHandler(
+    z.object({}),
+    z.object({}),
+    new IgnoreRequestBody(),
+  );
 }

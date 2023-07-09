@@ -1,19 +1,24 @@
-import { z } from "zod";
-import { BaseRequestHandler } from "./base-request-handler";
+import { z } from 'zod';
+import { BaseRequestHandler } from './base-request-handler';
 import {
   EmptyZodObject,
   RequestHandler,
   RouteParamsBase,
-} from "./handler-types";
-import { UseFinishRequest } from "./use-finish-request";
+} from './handler-types';
+import {
+  IgnoreRequestBody,
+  InferBodyType,
+  ValidBodyTypes,
+} from './type-helpers';
+import { UseFinishRequest } from './use-finish-request';
 
 export class FullRequestHandler<
   RouteParams extends RouteParamsBase = object,
   QueryParams extends z.SomeZodObject = EmptyZodObject,
   Cookies extends z.SomeZodObject = EmptyZodObject,
-  Body extends z.SomeZodObject = EmptyZodObject,
+  Body extends ValidBodyTypes = IgnoreRequestBody,
   InputContext extends object = object,
-  OutputContext extends object = object
+  OutputContext extends object = object,
 > extends UseFinishRequest<
   RouteParams,
   QueryParams,
@@ -32,7 +37,7 @@ export class FullRequestHandler<
     RouteParams,
     z.TypeOf<QueryParams>,
     z.TypeOf<Cookies>,
-    z.TypeOf<Body>,
+    InferBodyType<Body>,
     InputContext,
     OutputContext
   >;
@@ -51,10 +56,10 @@ export class FullRequestHandler<
       RouteParams,
       z.TypeOf<QueryParams>,
       z.TypeOf<Cookies>,
-      z.TypeOf<Body>,
+      InferBodyType<Body>,
       InputContext,
       OutputContext
-    >
+    >,
   ) {
     super();
     this.baseHandler = baseHandler;

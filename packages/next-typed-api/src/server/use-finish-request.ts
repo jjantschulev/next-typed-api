@@ -15,13 +15,14 @@ import {
   RequestMethodWithBody,
   RouteParamsBase,
 } from './handler-types';
+import { InferBodyType, ValidBodyTypes } from './type-helpers';
 import { UseContext } from './use-context';
 
 export abstract class UseFinishRequest<
   RouteParams extends RouteParamsBase,
   QueryParams extends z.SomeZodObject,
   Cookies extends z.SomeZodObject,
-  Body extends z.SomeZodObject,
+  Body extends ValidBodyTypes,
   InputContext extends ContextBase,
   OutputContext extends ContextBase,
 > extends UseContext<
@@ -42,11 +43,24 @@ export abstract class UseFinishRequest<
       RouteParams,
       z.TypeOf<QueryParams>,
       z.TypeOf<Cookies>,
-      Method extends RequestMethodWithBody ? z.TypeOf<Body> : undefined,
+      InferBodyType<Body>,
       OutputContext,
       D
     >,
-  ) {
+  ): (
+    req: NextRequest,
+    options: any,
+    _typeInfo?: {
+      method: Method;
+      body: Method extends RequestMethodWithBody
+        ? InferBodyType<Body>
+        : undefined;
+      params: RouteParams;
+      query: z.infer<QueryParams>;
+      cookies: z.infer<Cookies>;
+      data: D;
+    },
+  ) => Promise<NextResponse> {
     const realHandler = async (
       req: NextRequest,
       { params: rawParams }: { params: RouteParams },
@@ -73,9 +87,6 @@ export abstract class UseFinishRequest<
         const { body, query, cookies, params } =
           await this.getBaseHandler().parseRequest(req, { params: rawParams });
 
-        const realBody = body as Method extends RequestMethodWithBody
-          ? z.TypeOf<Body>
-          : undefined;
         const context = await this.getContextFunction()({
           params,
           query,
@@ -95,7 +106,7 @@ export abstract class UseFinishRequest<
             params,
             query,
             cookies,
-            body: realBody,
+            body,
             context,
             req,
             setCookie,
@@ -149,18 +160,7 @@ export abstract class UseFinishRequest<
       return response;
     };
 
-    return realHandler as unknown as (
-      req: NextRequest,
-      options: any,
-      _typeInfo?: {
-        method: Method;
-        body: z.infer<Body>;
-        params: RouteParams;
-        query: z.infer<QueryParams>;
-        cookies: z.infer<Cookies>;
-        data: D;
-      },
-    ) => Promise<NextResponse>;
+    return realHandler as never;
   }
 
   public get<D extends object>(
@@ -180,7 +180,7 @@ export abstract class UseFinishRequest<
       RouteParams,
       z.TypeOf<QueryParams>,
       z.TypeOf<Cookies>,
-      z.TypeOf<Body>,
+      InferBodyType<Body>,
       OutputContext,
       D
     >,
@@ -192,7 +192,7 @@ export abstract class UseFinishRequest<
       RouteParams,
       z.TypeOf<QueryParams>,
       z.TypeOf<Cookies>,
-      z.TypeOf<Body>,
+      InferBodyType<Body>,
       OutputContext,
       D
     >,
@@ -204,7 +204,7 @@ export abstract class UseFinishRequest<
       RouteParams,
       z.TypeOf<QueryParams>,
       z.TypeOf<Cookies>,
-      z.TypeOf<Body>,
+      InferBodyType<Body>,
       OutputContext,
       D
     >,

@@ -134,7 +134,24 @@ export type ValidBodyTypes =
   | z.ZodTuple<any, any>
   | z.ZodRecord<any, any>
   | z.ZodMap<any>
-  | z.ZodSet<any>;
+  | z.ZodSet<any>
+  | z.ZodString
+  | z.ZodNumber
+  | z.ZodNaN
+  | z.ZodBigInt
+  | z.ZodBoolean
+  | z.ZodUndefined
+  | z.ZodNull
+  | z.ZodLazy<any>
+  | z.ZodLiteral<any>
+  | z.ZodEnum<any>
+  | z.ZodEffects<any, any, any>
+  | z.ZodOptional<any>
+  | z.ZodNullable<any>
+  | z.ZodDefault<any>
+  | z.ZodCatch<any>
+  | z.ZodBranded<any, any>
+  | z.ZodPipeline<any, any>;
 
 export const ValidBodyTypeClasses = [
   z.ZodAny,
@@ -148,6 +165,23 @@ export const ValidBodyTypeClasses = [
   z.ZodRecord,
   z.ZodMap,
   z.ZodSet,
+  z.ZodString,
+  z.ZodNumber,
+  z.ZodNaN,
+  z.ZodBigInt,
+  z.ZodBoolean,
+  z.ZodUndefined,
+  z.ZodNull,
+  z.ZodLazy,
+  z.ZodLiteral,
+  z.ZodEnum,
+  z.ZodEffects,
+  z.ZodOptional,
+  z.ZodNullable,
+  z.ZodDefault,
+  z.ZodCatch,
+  z.ZodBranded,
+  z.ZodPipeline,
   IgnoreRequestBody,
 ];
 

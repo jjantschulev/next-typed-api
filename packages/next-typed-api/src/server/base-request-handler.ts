@@ -211,6 +211,7 @@ export class BaseRequestHandler<
     body: InferBodyType<Body>;
     cookies: z.infer<Cookies>;
     params: RouteParams;
+    rawBody: string;
   }> {
     const query = this.queryParamsSchema.parse(
       Object.fromEntries(req.nextUrl.searchParams.entries()),
@@ -218,8 +219,14 @@ export class BaseRequestHandler<
     const method = req.method as RequestMethod;
     const hasBody = RequestMethodHasBody[method];
     let body = undefined;
+    const rawBody = await req.text();
     if (hasBody && !(this.bodySchema instanceof IgnoreRequestBody)) {
-      const bodyData = await req.json().catch(() => ({}));
+      let bodyData: unknown;
+      try {
+        bodyData = JSON.parse(rawBody);
+      } catch {
+        bodyData = rawBody;
+      }
       body = this.bodySchema.parse(bodyData);
     }
     const cookiesObject: Record<string, string | string[]> = {};
@@ -234,7 +241,7 @@ export class BaseRequestHandler<
       }
     }
     const cookies = this.cookieSchema.parse(cookiesObject);
-    return { query, body, cookies, params };
+    return { query, body, cookies, params, rawBody };
   }
 
   getRequirements() {

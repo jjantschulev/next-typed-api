@@ -87,13 +87,15 @@ export abstract class UseFinishRequest<
         let body: InferBodyType<Body>,
           query: z.TypeOf<QueryParams>,
           cookies: z.TypeOf<Cookies>,
-          params: RouteParams;
+          params: RouteParams,
+          rawBody: string;
         try {
           const {
             body: b,
             query: q,
             cookies: c,
             params: p,
+            rawBody: rb,
           } = await this.getBaseHandler().parseRequest(req, {
             params: rawParams,
           });
@@ -101,6 +103,7 @@ export abstract class UseFinishRequest<
           query = q;
           cookies = c;
           params = p;
+          rawBody = rb;
         } catch (error) {
           const handlerFunc = this.getBaseHandler().parseErrorHandlerFunction;
           if (handlerFunc) {
@@ -120,6 +123,7 @@ export abstract class UseFinishRequest<
           setCookie,
           deleteCookie,
           headers,
+          rawBody,
         });
 
         if (context instanceof NextResponse) {
@@ -135,6 +139,7 @@ export abstract class UseFinishRequest<
             setCookie,
             deleteCookie,
             headers,
+            rawBody,
           });
         }
       } catch (error) {

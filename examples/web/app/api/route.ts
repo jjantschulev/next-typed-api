@@ -6,12 +6,12 @@ export const POST = api()
   .query({ param: z.string() })
   .body({ foo: z.literal('bar') })
   .use(logging)
-  .use(user)
-  .post(({ body, params }) => {
+  .post(({ body, params, rawBody }) => {
     return {
       status: 'ok',
       body,
       params,
+      rawBody,
     };
   });
 

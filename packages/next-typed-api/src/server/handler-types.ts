@@ -35,6 +35,7 @@ export type RequestHandler<
   context: Context;
   req: NextRequest;
   headers: Headers;
+  rawBody: string;
   setCookie: (...args: CookieSetArgs) => void;
   deleteCookie: (...args: CookieDeleteArgs) => void;
 }) => Res | NextResponse | Promise<Res | NextResponse>;

@@ -68,10 +68,15 @@ export function makeApiRequestFunction<
       const queryStr =
         query.toString().length > 0 ? '?' + query.toString() : '';
       const response = await fetch(
-        buildUrl(route as string, dataAny.params, {
-          overrideOrigin: customOverrideOrigin ?? overrideOrigin,
-          serverSideOrigin,
-        }) + queryStr,
+        buildUrl(
+          route as string,
+          dataAny.params,
+          {},
+          {
+            overrideOrigin: customOverrideOrigin ?? overrideOrigin,
+            serverSideOrigin,
+          },
+        ) + queryStr,
         {
           method: method,
           headers: {
@@ -154,6 +159,7 @@ function errorTypeFromCode(code: number): RequestErrorType {
 export function buildUrl(
   path: string,
   params: Record<string, string | string[]>,
+  queryParams: Record<string, string>,
   { overrideOrigin, serverSideOrigin }: UrlOverrides = {},
 ) {
   const parts = path.split('/');
@@ -176,6 +182,8 @@ export function buildUrl(
   const actualOrigin = overrideOrigin ?? baseOrigin;
 
   const urlObj = new URL(url, actualOrigin);
+  const searchParams = new URLSearchParams(queryParams);
+  urlObj.search = searchParams.toString();
   return urlObj.toString();
 }
 
@@ -185,7 +193,13 @@ export function makeBuildUrlFunction<Routes extends RouteDefinitions>(
   return function <Route extends keyof Routes>(
     route: Route,
     variables: Routes[Route]['params'],
+    queryParams: Routes[Route]['api']['queryParams'],
   ) {
-    return buildUrl(route as string, variables, urlOverrides);
+    return buildUrl(
+      route as string,
+      variables,
+      queryParams as any,
+      urlOverrides,
+    );
   };
 }

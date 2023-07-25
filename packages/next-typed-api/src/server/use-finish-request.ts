@@ -129,7 +129,7 @@ export abstract class UseFinishRequest<
         if (context instanceof NextResponse) {
           res = context;
         } else {
-          res = await handler({
+          const promise = handler({
             params,
             query,
             cookies,
@@ -141,33 +141,14 @@ export abstract class UseFinishRequest<
             headers,
             rawBody,
           });
+          if (promise instanceof Promise) {
+            res = await promise.catch((e) => errorToResponse(e, req));
+          } else {
+            res = promise;
+          }
         }
       } catch (error) {
-        if (error instanceof RedirectError) {
-          res = NextResponse.redirect(error.url, error.statusCode);
-        }
-        if (isRedirectError(error)) {
-          const url = getURLFromRedirectError(error);
-          res = NextResponse.redirect(url, 307);
-        }
-        if (isNotFoundError(error)) {
-          res = NextResponse.json(
-            JSON.stringify({ status: 'error', message: 'Not found' }),
-            {
-              status: 404,
-              statusText: 'Not found',
-            },
-          );
-        }
-        const errorMessage =
-          (error as Error).message ?? (error as string) ?? 'Unknown error';
-        res = NextResponse.json(
-          { status: 'error', message: errorMessage },
-          {
-            status: 500,
-            statusText: 'Internal server error',
-          },
-        );
+        res = errorToResponse(error, req);
       }
 
       const response =
@@ -274,5 +255,40 @@ export abstract class UseFinishRequest<
     >,
   ) {
     return this.finish('OPTIONS', handler);
+  }
+}
+
+function errorToResponse(error: unknown, req: NextRequest) {
+  if (error instanceof RedirectError) {
+    let url;
+    try {
+      const urlObj = new URL(error.url);
+      url = urlObj.href;
+    } catch (e) {
+      const urlObj = new URL(error.url, req.nextUrl.origin);
+      url = urlObj.href;
+    }
+    return NextResponse.redirect(url, error.statusCode);
+  } else if (isRedirectError(error)) {
+    const url = getURLFromRedirectError(error);
+    return NextResponse.redirect(url, 307);
+  } else if (isNotFoundError(error)) {
+    return NextResponse.json(
+      JSON.stringify({ status: 'error', message: 'Not found' }),
+      {
+        status: 404,
+        statusText: 'Not found',
+      },
+    );
+  } else {
+    const errorMessage =
+      (error as Error).message ?? (error as string) ?? 'Unknown error';
+    return NextResponse.json(
+      { status: 'error', message: errorMessage },
+      {
+        status: 500,
+        statusText: 'Internal server error',
+      },
+    );
   }
 }

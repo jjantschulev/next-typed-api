@@ -85,6 +85,7 @@ export function makeUseApiQuery<
     const queryKey = buildUrl(
       route as string,
       (variables as any)?.params,
+      {},
       urlOverrides,
     );
     const result = useQuery<Routes[Route]['api']['data'], RequestError>(
